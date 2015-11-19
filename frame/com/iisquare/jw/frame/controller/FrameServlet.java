@@ -70,8 +70,7 @@ public class FrameServlet extends HttpServlet {
 		ControllerBase instance = (ControllerBase) wac.getBean(controller);
 		int port = request.getServerPort();
 		String appUrl = request.getScheme() + "://" + request.getServerName();
-		if (80 != port)
-			appUrl += ":" + port;
+		if (80 != port) appUrl += ":" + port;
 		String appPath = appUrl + appUri;
 		instance.appUrl = appUrl;
 		instance.appUri = appUri;
@@ -128,27 +127,18 @@ public class FrameServlet extends HttpServlet {
 		route[1] = frameConfigration.getConfigParam("defaultActionName"); // actionName
 		route[2] = ""; // paramString
 		String uri = request.getRequestURI().trim();
-		if (!uri.matches("^[\\/_a-zA-Z\\d\\-]*$"))
-			return null;
-		if (!uri.endsWith("/"))
-			uri += "/";
-		if (null != appUri && uri.startsWith(appUri))
-			uri = uri.replaceFirst(appUri, "");
-		if (uri.startsWith("/"))
-			uri = uri.substring(1);
-		if (uri.endsWith("/"))
-			uri = uri.substring(0, uri.length() - 1);
-		if ("".equals(uri))
-			return route;
+		if (!uri.matches("^[\\/_a-zA-Z\\d\\-]*$")) return null;
+		if (!uri.endsWith("/")) uri += "/";
+		if (null != appUri && uri.startsWith(appUri)) uri = uri.replaceFirst(appUri, "");
+		if (uri.startsWith("/")) uri = uri.substring(1);
+		if (uri.endsWith("/")) uri = uri.substring(0, uri.length() - 1);
+		if ("".equals(uri)) return route;
 		String[] uris = uri.split("/");
 		route[0] = uris[0];
-		if (1 == uris.length)
-			return route;
+		if (1 == uris.length) return route;
 		route[1] = uris[1];
-		if (2 == uris.length)
-			return route;
-		if ("0".equals(frameConfigration.getConfigParam("allowPathParams")))
-			return null;
+		if (2 == uris.length) return route;
+		if ("0".equals(frameConfigration.getConfigParam("allowPathParams"))) return null;
 		StringBuilder stringBuilder = new StringBuilder();
 		int i, length = uris.length - 1;
 		for (i = 2; i < length; i++) {
