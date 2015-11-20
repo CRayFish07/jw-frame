@@ -7,6 +7,37 @@
         http://www.springframework.org/schema/context/spring-context.xsd"
         default-lazy-init="default">
 
-	<context:component-scan base-package="com.iisquare.jw.*" />
+	<context:component-scan base-package="com.iisquare.jw.demo.*" />
 
+    <bean id="propertyConfigurer"
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:frame.properties</value>
+                <value>classpath:freemarker.properties</value>
+                <value>classpath:jdbc.properties</value>
+            </list>
+        </property>
+    </bean>
+    
+    <bean id="frameConfiguration" class="com.iisquare.jw.frame.FrameConfiguration">
+	    <property name="controllerNamePath" value="${frame.controllerNamePath}" />
+		<property name="characterEncoding" value="${frame.characterEncoding}" />
+		<property name="contentType" value="${frame.contentType}" />
+		<property name="defaultControllerName" value="${frame.defaultControllerName}" />
+		<property name="defaultActionName" value="${frame.defaultActionName}" />
+		<property name="defaultErrorController" value="${frame.defaultErrorController}" />
+		<property name="defaultErrorAction" value="${frame.defaultErrorAction}" />
+		<property name="defaultControllerSuffix" value="${frame.defaultControllerSuffix}" />
+		<property name="defaultActionSuffix" value="${frame.defaultActionSuffix}" />
+		<property name="allowPathParams" value="${frame.allowPathParams}" />
+		<property name="templateLoaderPath" value="${frame.templateLoaderPath}" />
+		<property name="templateSuffix" value="${frame.templateSuffix}" />
+		<property name="locale" value="${frame.locale}" />
+		<property name="dateTimeFormat" value="${frame.dateTimeFormat}" />
+    </bean>
+    
+    <bean id="freeMarkerConfigurer" class="com.iisquare.jw.frame.view.FreeMarkerConfigurer">
+        <property name="frameConfiguration" ref="frameConfiguration" />
+    </bean>
 </beans>
