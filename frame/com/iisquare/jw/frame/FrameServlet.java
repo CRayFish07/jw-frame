@@ -1,4 +1,4 @@
-package com.iisquare.jw.frame.controller;
+package com.iisquare.jw.frame;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -13,7 +13,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
-import com.iisquare.jw.frame.FrameConfiguration;
+import com.iisquare.jw.frame.controller.ControllerBase;
 
 public class FrameServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
@@ -68,21 +68,21 @@ public class FrameServlet extends HttpServlet {
 				+ controllerName.substring(1)
 				+ frameConfiguration.getDefaultControllerSuffix());
 		ControllerBase instance = (ControllerBase) wac.getBean(controller);
-		instance.wac = wac;
+		instance.setWebApplicationContext(wac);
 		int port = request.getServerPort();
 		String appUrl = request.getScheme() + "://" + request.getServerName();
 		if (80 != port) appUrl += ":" + port;
 		String appPath = appUrl + appUri;
-		instance.appUrl = appUrl;
-		instance.appUri = appUri;
-		instance.appPath = appPath;
-		instance.rootPath = rootPath;
-		instance.controllerName = controllerName;
-		instance.actionName = actionName;
-		instance.request = request;
-		instance.response = response;
-		instance.params = request.getParameterMap();
-		instance.assign = new LinkedHashMap<>();
+		instance.setAppUrl(appUrl);
+		instance.setAppUri(appUri);
+		instance.setAppPath(appPath);
+		instance.setRootPath(rootPath);
+		instance.setControllerName(controllerName);
+		instance.setActionName(actionName);
+		instance.setRequest(request);
+		instance.setResponse(response);
+		instance.setParams(request.getParameterMap());
+		instance.setAssign(new LinkedHashMap<String, Object>());
 		Object initVal = instance.init();
 		if (null != initVal) {
 			proessError(request, response, route, new Exception("initError"), count);

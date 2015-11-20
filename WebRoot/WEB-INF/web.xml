@@ -16,7 +16,7 @@
 
 	<servlet>
 		<servlet-name>FrameServlet</servlet-name>
-		<servlet-class>com.iisquare.jw.frame.controller.FrameServlet</servlet-class>
+		<servlet-class>com.iisquare.jw.frame.FrameServlet</servlet-class>
 		<init-param>
 			<param-name>appUri</param-name>
 			<param-value>/jw-frame/</param-value>

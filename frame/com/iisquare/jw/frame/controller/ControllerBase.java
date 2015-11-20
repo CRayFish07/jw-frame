@@ -19,7 +19,7 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 public abstract class ControllerBase {
-	protected WebApplicationContext wac;
+	protected WebApplicationContext webApplicationContext;
 	protected String appUri, appUrl, appPath, rootPath;
 	protected String controllerName, actionName;
 
@@ -28,6 +28,94 @@ public abstract class ControllerBase {
 
 	protected Map<String, String[]> params; // 请求参数
 	protected Map<String, Object> assign; // 视图数据Map对象
+
+	public WebApplicationContext getWebApplicationContext() {
+		return webApplicationContext;
+	}
+
+	public void setWebApplicationContext(WebApplicationContext webApplicationContext) {
+		this.webApplicationContext = webApplicationContext;
+	}
+
+	public String getAppUri() {
+		return appUri;
+	}
+
+	public void setAppUri(String appUri) {
+		this.appUri = appUri;
+	}
+
+	public String getAppUrl() {
+		return appUrl;
+	}
+
+	public void setAppUrl(String appUrl) {
+		this.appUrl = appUrl;
+	}
+
+	public String getAppPath() {
+		return appPath;
+	}
+
+	public void setAppPath(String appPath) {
+		this.appPath = appPath;
+	}
+
+	public String getRootPath() {
+		return rootPath;
+	}
+
+	public void setRootPath(String rootPath) {
+		this.rootPath = rootPath;
+	}
+
+	public String getControllerName() {
+		return controllerName;
+	}
+
+	public void setControllerName(String controllerName) {
+		this.controllerName = controllerName;
+	}
+
+	public String getActionName() {
+		return actionName;
+	}
+
+	public void setActionName(String actionName) {
+		this.actionName = actionName;
+	}
+
+	public HttpServletRequest getRequest() {
+		return request;
+	}
+
+	public void setRequest(HttpServletRequest request) {
+		this.request = request;
+	}
+
+	public HttpServletResponse getResponse() {
+		return response;
+	}
+
+	public void setResponse(HttpServletResponse response) {
+		this.response = response;
+	}
+
+	public Map<String, String[]> getParams() {
+		return params;
+	}
+
+	public void setParams(Map<String, String[]> params) {
+		this.params = params;
+	}
+
+	public Map<String, Object> getAssign() {
+		return assign;
+	}
+
+	public void setAssign(Map<String, Object> assign) {
+		this.assign = assign;
+	}
 
 	public Object init() {
 		return null;
@@ -72,8 +160,8 @@ public abstract class ControllerBase {
 	}
 	
 	protected Object displayTemplate(String fileUri, Object dataModel) throws Exception {
-		Configuration cfg = wac.getBean(FreeMarkerConfigurer.class).getConfiguration();
-		FrameConfiguration frameConfiguration = wac.getBean(FrameConfiguration.class);
+		Configuration cfg = webApplicationContext.getBean(FreeMarkerConfigurer.class).getConfiguration();
+		FrameConfiguration frameConfiguration = webApplicationContext.getBean(FrameConfiguration.class);
         Template template = cfg.getTemplate(fileUri + frameConfiguration.getTemplateSuffix());
         Writer out = new OutputStreamWriter(response.getOutputStream());
         template.process(assign, out);
