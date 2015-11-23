@@ -7,26 +7,26 @@ import javax.servlet.ServletContext;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.web.context.ServletContextAware;
 
-import com.iisquare.jw.frame.FrameConfiguration;
+import com.iisquare.jw.frame.ApplicationConfiguration;
 
 import freemarker.template.Configuration;
 import freemarker.template.TemplateExceptionHandler;
 
 public class FreeMarkerConfigurer implements InitializingBean, ServletContextAware {
 	
-	private FrameConfiguration frameConfiguration;
+	private ApplicationConfiguration applicationConfiguration;
 	private ServletContext servletContext;
 	private Configuration configuration;
 	
 	private long templateUpdateDelay = 0;
 	private String templateExceptionHandler = "ignore";
 	
-	public FrameConfiguration getFrameConfiguration() {
-		return frameConfiguration;
+	public ApplicationConfiguration getapplicationConfiguration() {
+		return applicationConfiguration;
 	}
 
-	public void setFrameConfiguration(FrameConfiguration frameConfiguration) {
-		this.frameConfiguration = frameConfiguration;
+	public void setapplicationConfiguration(ApplicationConfiguration applicationConfiguration) {
+		this.applicationConfiguration = applicationConfiguration;
 	}
 	@Override
 	public void setServletContext(ServletContext servletContext) {
@@ -50,11 +50,11 @@ public class FreeMarkerConfigurer implements InitializingBean, ServletContextAwa
 		if(null != configuration) return;
 		configuration = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
 		configuration.setServletContextForTemplateLoading(
-				servletContext, frameConfiguration.getTemplateLoaderPath());
-		configuration.setDefaultEncoding(frameConfiguration.getCharacterEncoding());
+				servletContext, applicationConfiguration.getTemplateLoaderPath());
+		configuration.setDefaultEncoding(applicationConfiguration.getCharacterEncoding());
 		configuration.setTemplateUpdateDelayMilliseconds(templateUpdateDelay);
-		configuration.setLocale(Locale.forLanguageTag(frameConfiguration.getLocale()));
-		configuration.setDateFormat(frameConfiguration.getDateTimeFormat());
+		configuration.setLocale(Locale.forLanguageTag(applicationConfiguration.getLocale()));
+		configuration.setDateFormat(applicationConfiguration.getDateTimeFormat());
 		switch (templateExceptionHandler) {
 		case "debug" :
 			configuration.setTemplateExceptionHandler(TemplateExceptionHandler.DEBUG_HANDLER);

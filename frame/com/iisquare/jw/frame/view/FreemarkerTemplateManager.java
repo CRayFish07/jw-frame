@@ -2,20 +2,20 @@ package com.iisquare.jw.frame.view;
 
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 
-import com.iisquare.jw.frame.FrameConfiguration;
+import com.iisquare.jw.frame.ApplicationConfiguration;
 
 /**
  * FreeMarker自定义函数管理器
  */
 public class FreemarkerTemplateManager {
 	
-	private FrameConfiguration configuration;
+	private ApplicationConfiguration configuration;
 	
-	public FrameConfiguration getConfiguration() {
+	public ApplicationConfiguration getConfiguration() {
 		return configuration;
 	}
 
-	public void setConfiguration(FrameConfiguration configuration) {
+	public void setConfiguration(ApplicationConfiguration configuration) {
 		this.configuration = configuration;
 	}
 

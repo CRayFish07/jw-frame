@@ -10,7 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.web.context.WebApplicationContext;
 
-import com.iisquare.jw.frame.FrameConfiguration;
+import com.iisquare.jw.frame.ApplicationConfiguration;
 import com.iisquare.jw.frame.view.FreeMarkerConfigurer;
 
 import freemarker.template.Configuration;
@@ -161,8 +161,8 @@ public abstract class ControllerBase {
 	
 	protected Object displayTemplate(String fileUri, Object dataModel) throws Exception {
 		Configuration cfg = webApplicationContext.getBean(FreeMarkerConfigurer.class).getConfiguration();
-		FrameConfiguration frameConfiguration = webApplicationContext.getBean(FrameConfiguration.class);
-        Template template = cfg.getTemplate(fileUri + frameConfiguration.getTemplateSuffix());
+		ApplicationConfiguration applicationConfiguration = webApplicationContext.getBean(ApplicationConfiguration.class);
+        Template template = cfg.getTemplate(fileUri + applicationConfiguration.getTemplateSuffix());
         Writer out = new OutputStreamWriter(response.getOutputStream());
         template.process(assign, out);
 		return null;

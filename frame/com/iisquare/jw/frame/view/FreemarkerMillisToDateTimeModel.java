@@ -2,7 +2,7 @@ package com.iisquare.jw.frame.view;
 
 import java.util.List;
 
-import com.iisquare.jw.frame.FrameConfiguration;
+import com.iisquare.jw.frame.ApplicationConfiguration;
 import com.iisquare.jw.frame.util.DPUtil;
 
 import freemarker.template.TemplateMethodModelEx;
@@ -13,9 +13,9 @@ import freemarker.template.TemplateModelException;
  */
 public class FreemarkerMillisToDateTimeModel implements TemplateMethodModelEx {
 
-	private FrameConfiguration configuration;
+	private ApplicationConfiguration configuration;
 	
-	public FreemarkerMillisToDateTimeModel(FrameConfiguration configuration) {
+	public FreemarkerMillisToDateTimeModel(ApplicationConfiguration configuration) {
 		super();
 		this.configuration = configuration;
 	}

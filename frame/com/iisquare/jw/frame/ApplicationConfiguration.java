@@ -1,6 +1,6 @@
 package com.iisquare.jw.frame;
 
-public class FrameConfiguration {
+public class ApplicationConfiguration {
 
 	private String controllerNamePath = ""; // Controller所在包路径
 	private String characterEncoding = "UTF-8"; // 字符集编码
@@ -129,6 +129,6 @@ public class FrameConfiguration {
 		this.dateTimeFormat = dateTimeFormat;
 	}
 
-	public FrameConfiguration() {
+	public ApplicationConfiguration() {
 	}
 }

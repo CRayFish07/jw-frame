@@ -15,8 +15,8 @@
 	</listener>
 
 	<servlet>
-		<servlet-name>FrameServlet</servlet-name>
-		<servlet-class>com.iisquare.jw.frame.FrameServlet</servlet-class>
+		<servlet-name>ApplicationServlet</servlet-name>
+		<servlet-class>com.iisquare.jw.frame.ApplicationServlet</servlet-class>
 		<init-param>
 			<param-name>appUri</param-name>
 			<param-value>/jw-frame/</param-value>
@@ -24,7 +24,7 @@
 	</servlet>
 
 	<servlet-mapping>
-		<servlet-name>FrameServlet</servlet-name>
+		<servlet-name>ApplicationServlet</servlet-name>
 		<url-pattern>/*</url-pattern>
 	</servlet-mapping>
 	<welcome-file-list>

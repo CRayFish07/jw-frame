@@ -15,16 +15,16 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import com.iisquare.jw.frame.controller.ControllerBase;
 
-public class FrameServlet extends HttpServlet {
+public class ApplicationServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private WebApplicationContext wac;
-	private FrameConfiguration frameConfiguration;
+	private ApplicationConfiguration applicationConfiguration;
 	private String appUri, rootPath;
 
 	@Override
 	public void init() throws ServletException {
 		wac = WebApplicationContextUtils.getRequiredWebApplicationContext(getServletContext());
-		frameConfiguration = wac.getBean(FrameConfiguration.class);
+		applicationConfiguration = wac.getBean(ApplicationConfiguration.class);
 		appUri = getInitParameter("appUri");
 		if (!appUri.startsWith("/")) appUri = "/" + appUri;
 		if (!appUri.endsWith("/")) appUri += "/";
@@ -40,17 +40,17 @@ public class FrameServlet extends HttpServlet {
 	@Override
 	protected void service(HttpServletRequest request,
 			HttpServletResponse response) throws ServletException, IOException {
-		String characterEncoding = frameConfiguration.getCharacterEncoding();
+		String characterEncoding = applicationConfiguration.getCharacterEncoding();
 		request.setCharacterEncoding(characterEncoding);
 		response.setCharacterEncoding(characterEncoding);
-		response.setContentType(frameConfiguration.getContentType());
+		response.setContentType(applicationConfiguration.getContentType());
 		Object[] route = parse(request);
 		try {
 			if (null == route) throw new Exception("uriError");
 			processInvoke(request, response, route, null, 0);
 		} catch (Exception e) {
-			route[0] = frameConfiguration.getDefaultErrorController();
-			route[1] = frameConfiguration.getDefaultErrorAction();
+			route[0] = applicationConfiguration.getDefaultErrorController();
+			route[1] = applicationConfiguration.getDefaultErrorAction();
 			try {
 				processInvoke(request, response, route, e, 0);
 			} catch (Exception e1) {
@@ -63,10 +63,10 @@ public class FrameServlet extends HttpServlet {
 			Object[] route, Exception e, int count) throws Exception {
 		String controllerName = route[0].toString();
 		String actionName = route[1].toString();
-		Class<?> controller = Class.forName(frameConfiguration.getControllerNamePath()
+		Class<?> controller = Class.forName(applicationConfiguration.getControllerNamePath()
 				+ "." + controllerName.substring(0, 1).toUpperCase()
 				+ controllerName.substring(1)
-				+ frameConfiguration.getDefaultControllerSuffix());
+				+ applicationConfiguration.getDefaultControllerSuffix());
 		ControllerBase instance = (ControllerBase) wac.getBean(controller);
 		instance.setWebApplicationContext(wac);
 		int port = request.getServerPort();
@@ -91,10 +91,10 @@ public class FrameServlet extends HttpServlet {
 		Object actionVal;
 		if (null == e) {
 			actionVal = controller.getMethod(actionName
-					+ frameConfiguration.getDefaultActionSuffix()).invoke(instance);
+					+ applicationConfiguration.getDefaultActionSuffix()).invoke(instance);
 		} else {
 			actionVal = controller.getMethod(
-					actionName + frameConfiguration.getDefaultActionSuffix(),
+					actionName + applicationConfiguration.getDefaultActionSuffix(),
 					Exception.class).invoke(instance, e);
 		}
 		Object destroyVal = instance.destroy(actionVal);
@@ -107,14 +107,14 @@ public class FrameServlet extends HttpServlet {
 	private void proessError(HttpServletRequest request,
 			HttpServletResponse response, Object[] route, Exception e, int count) {
 		if (count > 0) {
-			Log logger = LogFactory.getLog(FrameConfiguration.class);
+			Log logger = LogFactory.getLog(ApplicationConfiguration.class);
 			if(logger.isErrorEnabled()) {
 				logger.error(route.toString(), e);
 			}
 			return;
 		}
-		route[0] = frameConfiguration.getDefaultErrorController();
-		route[1] = frameConfiguration.getDefaultErrorAction();
+		route[0] = applicationConfiguration.getDefaultErrorController();
+		route[1] = applicationConfiguration.getDefaultErrorAction();
 		try {
 			processInvoke(request, response, route, e, count++);
 		} catch (Exception e1) {
@@ -124,8 +124,8 @@ public class FrameServlet extends HttpServlet {
 
 	private Object[] parse(HttpServletRequest request) {
 		Object[] route = new Object[3];
-		route[0] = frameConfiguration.getDefaultControllerName(); // controllerName
-		route[1] = frameConfiguration.getDefaultActionName(); // actionName
+		route[0] = applicationConfiguration.getDefaultControllerName(); // controllerName
+		route[1] = applicationConfiguration.getDefaultActionName(); // actionName
 		route[2] = ""; // paramString
 		String uri = request.getRequestURI().trim();
 		if (!uri.matches("^[\\/_a-zA-Z\\d\\-]*$")) return null;
@@ -139,7 +139,7 @@ public class FrameServlet extends HttpServlet {
 		if (1 == uris.length) return route;
 		route[1] = uris[1];
 		if (2 == uris.length) return route;
-		if (0 == frameConfiguration.getAllowPathParams()) return null;
+		if (0 == applicationConfiguration.getAllowPathParams()) return null;
 		StringBuilder stringBuilder = new StringBuilder();
 		int i, length = uris.length - 1;
 		for (i = 2; i < length; i++) {

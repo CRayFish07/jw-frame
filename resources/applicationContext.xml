@@ -13,31 +13,31 @@
         class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
         <property name="locations">
             <list>
-                <value>classpath:frame.properties</value>
+                <value>classpath:application.properties</value>
                 <value>classpath:freemarker.properties</value>
                 <value>classpath:jdbc.properties</value>
             </list>
         </property>
     </bean>
     
-    <bean id="frameConfiguration" class="com.iisquare.jw.frame.FrameConfiguration">
-	    <property name="controllerNamePath" value="${frame.controllerNamePath}" />
-		<property name="characterEncoding" value="${frame.characterEncoding}" />
-		<property name="contentType" value="${frame.contentType}" />
-		<property name="defaultControllerName" value="${frame.defaultControllerName}" />
-		<property name="defaultActionName" value="${frame.defaultActionName}" />
-		<property name="defaultErrorController" value="${frame.defaultErrorController}" />
-		<property name="defaultErrorAction" value="${frame.defaultErrorAction}" />
-		<property name="defaultControllerSuffix" value="${frame.defaultControllerSuffix}" />
-		<property name="defaultActionSuffix" value="${frame.defaultActionSuffix}" />
-		<property name="allowPathParams" value="${frame.allowPathParams}" />
-		<property name="templateLoaderPath" value="${frame.templateLoaderPath}" />
-		<property name="templateSuffix" value="${frame.templateSuffix}" />
-		<property name="locale" value="${frame.locale}" />
-		<property name="dateTimeFormat" value="${frame.dateTimeFormat}" />
+    <bean id="applicationConfiguration" class="com.iisquare.jw.frame.ApplicationConfiguration">
+	    <property name="controllerNamePath" value="${application.controllerNamePath}" />
+		<property name="characterEncoding" value="${application.characterEncoding}" />
+		<property name="contentType" value="${application.contentType}" />
+		<property name="defaultControllerName" value="${application.defaultControllerName}" />
+		<property name="defaultActionName" value="${application.defaultActionName}" />
+		<property name="defaultErrorController" value="${application.defaultErrorController}" />
+		<property name="defaultErrorAction" value="${application.defaultErrorAction}" />
+		<property name="defaultControllerSuffix" value="${application.defaultControllerSuffix}" />
+		<property name="defaultActionSuffix" value="${application.defaultActionSuffix}" />
+		<property name="allowPathParams" value="${application.allowPathParams}" />
+		<property name="templateLoaderPath" value="${application.templateLoaderPath}" />
+		<property name="templateSuffix" value="${application.templateSuffix}" />
+		<property name="locale" value="${application.locale}" />
+		<property name="dateTimeFormat" value="${application.dateTimeFormat}" />
     </bean>
     
     <bean id="freeMarkerConfigurer" class="com.iisquare.jw.frame.view.FreeMarkerConfigurer">
-        <property name="frameConfiguration" ref="frameConfiguration" />
+        <property name="applicationConfiguration" ref="applicationConfiguration" />
     </bean>
 </beans>
