@@ -49,8 +49,10 @@ public class ApplicationServlet extends HttpServlet {
 			if (null == route) throw new Exception("uriError");
 			processInvoke(request, response, route, null, 0);
 		} catch (Exception e) {
+			route = new Object[3];
 			route[0] = applicationConfiguration.getDefaultErrorController();
 			route[1] = applicationConfiguration.getDefaultErrorAction();
+			route[2] = "";
 			try {
 				processInvoke(request, response, route, e, 0);
 			} catch (Exception e1) {
@@ -113,8 +115,10 @@ public class ApplicationServlet extends HttpServlet {
 			}
 			return;
 		}
+		route = new Object[3];
 		route[0] = applicationConfiguration.getDefaultErrorController();
 		route[1] = applicationConfiguration.getDefaultErrorAction();
+		route[2] = "";
 		try {
 			processInvoke(request, response, route, e, count++);
 		} catch (Exception e1) {

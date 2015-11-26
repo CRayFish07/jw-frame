@@ -132,18 +132,18 @@ public abstract class ControllerBase {
 		assign.put(key, value);
 	}
 
-	public String url() {
+	protected String url() {
 		return url(controllerName, actionName);
 	}
 
-	public String url(String action) {
+	protected String url(String action) {
 		return url(controllerName, action);
 	}
 
 	/**
 	 * 获取URL地址
 	 */
-	public String url(String controller, String action) {
+	protected String url(String controller, String action) {
 		return appPath + controller + "/" + action;
 	}
 
