@@ -144,7 +144,7 @@ public abstract class ControllerBase {
 	 * 获取URL地址
 	 */
 	protected String url(String controller, String action) {
-		return appPath + controller + "/" + action;
+		return appPath + controller + "/" + action + "/";
 	}
 
 	protected Object displayTemplate() throws Exception {
