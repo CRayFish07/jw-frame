@@ -44,7 +44,7 @@ public class ApplicationServlet extends HttpServlet {
 		request.setCharacterEncoding(characterEncoding);
 		response.setCharacterEncoding(characterEncoding);
 		response.setContentType(applicationConfiguration.getContentType());
-		Object[] route = parse(request);
+		Object[] route = parseRoute(request);
 		try {
 			if (null == route) throw new Exception("uriError");
 			processInvoke(request, response, route, null, 0);
@@ -122,7 +122,7 @@ public class ApplicationServlet extends HttpServlet {
 		}
 	}
 
-	private Object[] parse(HttpServletRequest request) {
+	private Object[] parseRoute(HttpServletRequest request) {
 		Object[] route = new Object[3];
 		route[0] = applicationConfiguration.getDefaultControllerName(); // controllerName
 		route[1] = applicationConfiguration.getDefaultActionName(); // actionName
