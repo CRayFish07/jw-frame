@@ -1,7 +1,8 @@
+// 插件
 apply plugin: 'maven'  
 apply plugin: 'war'  
 apply plugin: 'eclipse-wtp'
-
+// 源码目录
 sourceSets {
     main {
         java {
@@ -11,12 +12,16 @@ sourceSets {
         }
     }
 }
-
+// 仓库
 repositories {
     mavenCentral()
 }
+// 依赖
 dependencies {
+    providedRuntime ( // 不会打包进war
+        "javax.servlet:javax.servlet-api:3.1.0",
+        "jstl:jstl:1.2"
+    )
     compile (
-        "javax.servlet:javax.servlet-api:3.1.0"
     )
 }
