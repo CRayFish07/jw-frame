@@ -1,0 +1,22 @@
+apply plugin: 'maven'  
+apply plugin: 'war'  
+apply plugin: 'eclipse-wtp'
+
+sourceSets {
+    main {
+        java {
+            srcDir 'frame'
+            srcDir 'core'
+            srcDir 'model'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+dependencies {
+    compile (
+        "javax.servlet:javax.servlet-api:3.1.0"
+    )
+}
