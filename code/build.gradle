@@ -25,3 +25,5 @@ dependencies {
     compile (
     )
 }
+// 项目设置
+eclipse.project.name = 'jw-frame'
