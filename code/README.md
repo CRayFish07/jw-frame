@@ -9,7 +9,9 @@
 5. 在项目上单击右键，选择Gradle(STS)->Refresh All
 
 ### 清理项目
-> gradle cleanEclipse
+> 
+1. gradle cleanEclipse
+2. gradle clean
 
 ### 打包项目
 > gradle war
