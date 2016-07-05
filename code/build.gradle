@@ -2,6 +2,7 @@
 apply plugin: 'maven'  
 apply plugin: 'war'  
 apply plugin: 'eclipse-wtp'
+apply plugin: 'idea'
 // 源码目录
 sourceSets {
     main {
