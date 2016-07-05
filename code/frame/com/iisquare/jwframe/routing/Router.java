@@ -17,7 +17,7 @@ public class Router {
     }
     
     public synchronized static void init(LinkedHashMap<String, String> customDomains) {
-    	domains = new LinkedHashMap<>(); // 防止并发读写
+    	domains = new LinkedHashMap<>(); // 避免并发读写
     	for (Entry<String, String> entry : customDomains.entrySet()) {
     		String domain = "^" + entry.getKey().replaceAll("\\.", "\\\\.").replaceAll("\\*", ".+") + "$";
     		domains.put(domain, entry.getValue());
