@@ -29,3 +29,4 @@ dependencies {
 }
 // 项目设置
 eclipse.project.name = 'jw-frame'
+war.baseName = eclipse.project.name
