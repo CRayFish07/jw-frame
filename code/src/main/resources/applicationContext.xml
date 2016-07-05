@@ -6,5 +6,33 @@
         http://www.springframework.org/schema/context
         http://www.springframework.org/schema/context/spring-context.xsd"
         default-lazy-init="true">
+
+    <bean id="propertyConfigurer"
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:application.properties</value>
+                <value>classpath:freemarker.properties</value>
+                <value>classpath:jdbc.properties</value>
+            </list>
+        </property>
+    </bean>
     
+    <bean id="configuration" class="com.iisquare.jwframe.Configuration">
+        <property name="controllerNamePath" value="${application.controllerNamePath}" />
+        <property name="characterEncoding" value="${application.characterEncoding}" />
+        <property name="contentType" value="${application.contentType}" />
+        <property name="defaultControllerName" value="${application.defaultControllerName}" />
+        <property name="defaultActionName" value="${application.defaultActionName}" />
+        <property name="defaultErrorController" value="${application.defaultErrorController}" />
+        <property name="defaultErrorAction" value="${application.defaultErrorAction}" />
+        <property name="defaultControllerSuffix" value="${application.defaultControllerSuffix}" />
+        <property name="defaultActionSuffix" value="${application.defaultActionSuffix}" />
+        <property name="allowPathParams" value="${application.allowPathParams}" />
+        <property name="templateLoaderPath" value="${application.templateLoaderPath}" />
+        <property name="templateSuffix" value="${application.templateSuffix}" />
+        <property name="locale" value="${application.locale}" />
+        <property name="dateTimeFormat" value="${application.dateTimeFormat}" />
+    </bean>
+ 
 </beans>
