@@ -184,7 +184,7 @@ public abstract class ControllerBase {
 		Template template = webApplicationContext.getBean(FreeMarkerConfigurer.class).getConfiguration()
 				.getTemplate(moduleName + "/" + fileUri + webApplicationContext.getBean(Configuration.class).getTemplateSuffix());
 		Writer out = new OutputStreamWriter(response.getOutputStream());
-		template.process(assign, out);
+		template.process(dataModel, out);
 		return null;
 	}
 	

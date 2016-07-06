@@ -133,6 +133,7 @@ public class Router {
     }
     
     private Exception invoke(String module, RouteAction route, Object arg) {
+    	if(null == route) return new ApplicationException("no route matches!");
     	String controllerName = route.getControllerName();
 		String actionName = route.getActionName();
     	Class<?> controller;
@@ -157,12 +158,11 @@ public class Router {
 			instance.setActionName(actionName);
 			instance.setRequest(request);
 			instance.setResponse(response);
-			Map<String, String[]> params = request.getParameterMap();
-			Map<String, String[]> routeParams = route.getParams();
-			if(null != routeParams) {
-				for (Entry<String, String[]> entry : routeParams.entrySet()) {
-					params.put(entry.getKey(), entry.getValue());
-				}
+			Map<String, String[]> paramsMap = request.getParameterMap();
+			Map<String, String[]> params = route.getParams();
+			if(null == params) params = new LinkedHashMap<>();
+			for (Entry<String, String[]> entry : paramsMap.entrySet()) {
+				params.put(entry.getKey(), entry.getValue());
 			}
 			instance.setParams(params);
 			instance.setAssign(new LinkedHashMap<String, Object>());
