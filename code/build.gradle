@@ -30,7 +30,9 @@ dependencies {
         // Spring
         [group: 'org.springframework', name: 'spring-web', version: springVersion],
         // JSON
-        [group: 'net.sf.json-lib', name: 'json-lib-ext-spring', version: '1.0.2']
+        [group: 'net.sf.json-lib', name: 'json-lib-ext-spring', version: '1.0.2'],
+        // View
+        [group: 'org.freemarker', name: 'freemarker', version: '2.3.23']
     )
 }
 // 项目设置

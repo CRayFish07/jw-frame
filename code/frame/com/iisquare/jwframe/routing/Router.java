@@ -7,6 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
+
 import com.iisquare.jwframe.Configuration;
 import com.iisquare.jwframe.utils.DPUtil;
 
@@ -14,12 +20,27 @@ public class Router {
 	
 	private static Map<String, ArrayList<RouteURI>> routes = new Hashtable<>();
     private static LinkedHashMap<String, String> domains = new LinkedHashMap<>();
+    private WebApplicationContext wac;
+    private Configuration configuration;
+    private String appUri, rootPath;
+    private HttpServletRequest request;
+	private HttpServletResponse response;
     
     static {
     	domains.put("*", "frontend");
     }
     
-    public synchronized static void init(LinkedHashMap<String, String> customDomains) {
+    public Router(String appUri, String rootPath, HttpServletRequest request,
+			HttpServletResponse response) {
+		this.appUri = appUri;
+		this.rootPath = rootPath;
+		this.request = request;
+		this.response = response;
+		wac = WebApplicationContextUtils.getRequiredWebApplicationContext(request.getServletContext());
+		configuration = wac.getBean(Configuration.class);
+	}
+
+	public synchronized static void init(LinkedHashMap<String, String> customDomains) {
     	domains = new LinkedHashMap<>(); // 避免并发读写
     	for (Entry<String, String> entry : customDomains.entrySet()) {
     		String domain = "^" + entry.getKey().replaceAll("\\.", "\\\\.").replaceAll("\\*", ".+") + "$";
@@ -89,8 +110,9 @@ public class Router {
         return null;
     }
     
-    public RouteAction conventionRoute(String uri, Configuration config) {
-        RouteAction route = new RouteAction(config.getDefaultControllerName(), config.getDefaultActionName(), null);
+    public RouteAction conventionRoute(String uri) {
+        RouteAction route = new RouteAction(
+        		configuration.getDefaultControllerName(), configuration.getDefaultActionName(), null);
         uri = DPUtil.trim(uri, "/");
         if("".equals(uri)) return route;
         String[] uriArray = DPUtil.explode(uri, "/", null, false);
@@ -98,7 +120,7 @@ public class Router {
         if(1 == uriArray.length) return route;
         route.setActionName(uriArray[1]);
         if(2 == uriArray.length) return route;
-        if(DPUtil.empty(config.getAllowPathParams()) || uriArray.length % 2 != 0) return null;
+        if(DPUtil.empty(configuration.getAllowPathParams()) || uriArray.length % 2 != 0) return null;
         Map<String, String[]> params = new LinkedHashMap<>();
         for (int i = 2; i < uriArray.length; i += 2) {
         	params.put(uriArray[i], new String[] {uriArray[i + 1]});
@@ -106,12 +128,18 @@ public class Router {
         route.setParams(params);
         return route;
     }
-    /*
-    private function invoke(Application app, module, route, args = null) {
-        config = app->getApplicationConfig();
-        webApplicationContext = WebApplicationContext::getInstance();
-        className = app->getRootNamespace().app->getApplicationDirectory()."\\".module."\\controller"
-            ."\\".ucfirst(route["controller"]).config["defaultControllerSuffix"];
+    
+    private Object invoke(String module, RouteAction route, Object arg) throws Exception {
+    	String controllerName = route.getControllerName();
+		String actionName = route.getActionName();
+    	Class<?> controller = Class.forName(configuration.getControllerNamePath()
+				+ "." + controllerName.substring(0, 1).toUpperCase()
+				+ controllerName.substring(1)
+				+ configuration.getDefaultControllerSuffix());
+    	
+    	return null;
+        /*className = app->getRootNamespace().app->getApplicationDirectory()."\\".module."\\controller"
+            ."\\".ucfirst(route["controller"]).configuration["defaultControllerSuffix"];
         instance = webApplicationContext->getBean(className);
         try {
             controller = new ReflectionClass(instance);
@@ -128,7 +156,7 @@ public class Router {
             instance->setAssign([]);
             initVal = instance->init();
             if (null !== initVal) return new ApplicationException("initError");
-            action = controller->getMethod(route["action"].config["defaultActionSuffix"]);
+            action = controller->getMethod(route["action"].configuration["defaultActionSuffix"]);
             if (null === args) {
                 actionVal = action->invoke(instance);
             } else {
@@ -139,11 +167,11 @@ public class Router {
         } catch (Exception e) {
             return new Exception("Route:controller[".route["controller"]."] - action[".route["action"]."]", null, e);
         }
-        return null;
+        return null;*/
     }
-    
+    /*
     public function dispatch(Application app) {
-        config = app->getApplicationConfig();
+        configuration = app->getApplicationConfig();
         // 模块检测
         host = explode(":", _SERVER["HTTP_HOST"])[0];
         module = this->parseModule(host);
@@ -159,12 +187,12 @@ public class Router {
         // 自定义路由检测
         route = this->parseRoute(uri);
         // 约定路由检测
-        if(null == route) route = this->conventionRoute(uri, config);
+        if(null == route) route = this->conventionRoute(uri, configuration);
         // 执行路由
         retVal = this->invoke(app, module, route);
         if(null === retVal) return null;
         // 执行路由失败，调用错误处理
-        route = self::generateRoute(config["defaultErrorController"], config["defaultErrorAction"]);
+        route = self::generateRoute(configuration["defaultErrorController"], configuration["defaultErrorAction"]);
         return this->invoke(app, module, route, retVal);
     }*/
 }
