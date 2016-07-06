@@ -7,6 +7,8 @@
         http://www.springframework.org/schema/context/spring-context.xsd"
         default-lazy-init="true">
 
+    <context:component-scan base-package="" />
+
     <bean id="propertyConfigurer"
         class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
         <property name="locations">
@@ -33,6 +35,10 @@
         <property name="templateSuffix" value="${application.templateSuffix}" />
         <property name="locale" value="${application.locale}" />
         <property name="dateTimeFormat" value="${application.dateTimeFormat}" />
+    </bean>
+ 
+    <bean id="freeMarkerConfigurer" class="com.iisquare.jwframe.freemarker.FreeMarkerConfigurer">
+        <property name="applicationConfiguration" ref="configuration" />
     </bean>
  
 </beans>

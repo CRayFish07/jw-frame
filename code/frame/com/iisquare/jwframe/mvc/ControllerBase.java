@@ -12,9 +12,9 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 
 import com.iisquare.jwframe.Configuration;
+import com.iisquare.jwframe.freemarker.FreeMarkerConfigurer;
 
 import freemarker.template.Template;
 

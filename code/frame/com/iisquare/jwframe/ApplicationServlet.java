@@ -7,6 +7,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.iisquare.jwframe.routing.Router;
+
 public class ApplicationServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
@@ -18,7 +20,6 @@ public class ApplicationServlet extends HttpServlet {
 		if (!appUri.startsWith("/")) appUri = "/" + appUri;
 		if (!appUri.endsWith("/")) appUri += "/";
 		rootPath = getServletContext().getRealPath("/");
-		System.out.println(appUri + "\r\n" + rootPath);
 		super.init();
 	}
 
@@ -30,7 +31,8 @@ public class ApplicationServlet extends HttpServlet {
 	@Override
 	protected void service(HttpServletRequest request,
 			HttpServletResponse response) throws ServletException, IOException {
-		
+		Object result = new Router(appUri, rootPath, request, response).dispatch();
+		if(null != result) throw new ServletException(result.toString());
 	}
 
 }

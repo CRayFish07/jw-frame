@@ -30,6 +30,7 @@ public class Router {
     
     static {
     	domains.put("*", "frontend");
+    	init(domains);
     }
     
     public Router(String appUri, String rootPath, HttpServletRequest request,
@@ -137,7 +138,8 @@ public class Router {
     	Class<?> controller;
 		try {
 			controller = Class.forName(configuration.getControllerNamePath()
-					+ "." + controllerName.substring(0, 1).toUpperCase()
+					+ "." + module + ".controller."
+					+ controllerName.substring(0, 1).toUpperCase()
 					+ controllerName.substring(1)
 					+ configuration.getDefaultControllerSuffix());
 			ControllerBase instance = (ControllerBase) wac.getBean(controller);
