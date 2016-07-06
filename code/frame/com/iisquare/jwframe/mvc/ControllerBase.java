@@ -22,7 +22,7 @@ public abstract class ControllerBase {
 	
 	protected WebApplicationContext webApplicationContext;
 	protected String appUri, appUrl, appPath, rootPath;
-	protected String controllerName, actionName;
+	protected String moduleName, controllerName, actionName;
 
 	protected HttpServletRequest request;
 	protected HttpServletResponse response;
@@ -68,6 +68,14 @@ public abstract class ControllerBase {
 
 	public void setRootPath(String rootPath) {
 		this.rootPath = rootPath;
+	}
+
+	public String getModuleName() {
+		return moduleName;
+	}
+
+	public void setModuleName(String moduleName) {
+		this.moduleName = moduleName;
 	}
 
 	public String getControllerName() {
@@ -173,10 +181,10 @@ public abstract class ControllerBase {
 	}
 	
 	protected Object displayTemplate(String fileUri, Object dataModel) throws Exception {
-        Template template = webApplicationContext.getBean(FreeMarkerConfigurer.class).getConfiguration()
-        		.getTemplate(fileUri + webApplicationContext.getBean(Configuration.class).getTemplateSuffix());
-        Writer out = new OutputStreamWriter(response.getOutputStream());
-        template.process(assign, out);
+		Template template = webApplicationContext.getBean(FreeMarkerConfigurer.class).getConfiguration()
+				.getTemplate(moduleName + "/" + fileUri + webApplicationContext.getBean(Configuration.class).getTemplateSuffix());
+		Writer out = new OutputStreamWriter(response.getOutputStream());
+		template.process(assign, out);
 		return null;
 	}
 	

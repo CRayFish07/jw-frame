@@ -132,7 +132,7 @@ public class Router {
         return route;
     }
     
-    private Object invoke(String module, RouteAction route, Object arg) {
+    private Exception invoke(String module, RouteAction route, Object arg) {
     	String controllerName = route.getControllerName();
 		String actionName = route.getActionName();
     	Class<?> controller;
@@ -152,6 +152,7 @@ public class Router {
 			instance.setAppUri(appUri);
 			instance.setAppPath(appPath);
 			instance.setRootPath(rootPath);
+			instance.setModuleName(module);
 			instance.setControllerName(controllerName);
 			instance.setActionName(actionName);
 			instance.setRequest(request);
@@ -173,7 +174,7 @@ public class Router {
 						+ configuration.getDefaultActionSuffix()).invoke(instance);
 			} else {
 				actionVal = controller.getMethod(actionName
-						+ configuration.getDefaultActionSuffix()).invoke(instance, arg);
+						+ configuration.getDefaultActionSuffix(), Exception.class).invoke(instance, arg);
 			}
 			Object destroyVal = instance.destroy(actionVal);
 			if (null != destroyVal) return new ApplicationException("destroyError");
