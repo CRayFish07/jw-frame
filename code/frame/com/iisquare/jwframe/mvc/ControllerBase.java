@@ -126,6 +126,18 @@ public abstract class ControllerBase {
 		return actionVal;
 	}
 
+	protected String getParam(String key) {
+        return getParam(key, null);
+    }
+	
+	protected String getParam(String key, String defaultValue) {
+        if(null == key) return null;
+        if(!params.containsKey(key)) return defaultValue;
+        String[] values = params.get(key);
+        if(null == values || 0 == values.length) return null;
+        return values[0];
+    }
+	
 	/**
 	 * 设置视图中需要的参数
 	 */
