@@ -1,15 +1,18 @@
 package com.iisquare.jwframe.routing;
 
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
+import com.iisquare.jwframe.Configuration;
 import com.iisquare.jwframe.utils.DPUtil;
 
 public class Router {
 	
-	private static ArrayList<RouteURI> routes = new ArrayList<>();
+	private static Map<String, ArrayList<RouteURI>> routes = new Hashtable<>();
     private static LinkedHashMap<String, String> domains = new LinkedHashMap<>();
     
     static {
@@ -24,41 +27,46 @@ public class Router {
     	}
     }
     
-    public static boolean get(String uri, Generator action) {
-        return addRoute(new String[] {"GET", "HEAD"}, uri, action);
+    public static boolean get(String module, String uri, Generator action) {
+        return addRoute(module, new String[] {"GET", "HEAD"}, uri, action);
     }
     
-    public static boolean post(String uri, Generator action) {
-        return addRoute(new String[] {"POST"}, uri, action);
+    public static boolean post(String module, String uri, Generator action) {
+        return addRoute(module, new String[] {"POST"}, uri, action);
     }
     
-    public static boolean put(String uri, Generator action) {
-        return addRoute(new String[] {"PUT"}, uri, action);
+    public static boolean put(String module, String uri, Generator action) {
+        return addRoute(module, new String[] {"PUT"}, uri, action);
     }
     
-    public static boolean patch(String uri, Generator action) {
-        return addRoute(new String[] {"PATCH"}, uri, action);
+    public static boolean patch(String module, String uri, Generator action) {
+        return addRoute(module, new String[] {"PATCH"}, uri, action);
     }
     
-    public static boolean delete(String uri, Generator action) {
-        return addRoute(new String[] {"DELETE"}, uri, action);
+    public static boolean delete(String module, String uri, Generator action) {
+        return addRoute(module, new String[] {"DELETE"}, uri, action);
     }
     
-    public static boolean options(String uri, Generator action) {
-        return addRoute(new String[] {"OPTIONS"}, uri, action);
+    public static boolean options(String module, String uri, Generator action) {
+        return addRoute(module, new String[] {"OPTIONS"}, uri, action);
     }
     
-    public static boolean any(String uri, Generator action) {
+    public static boolean any(String module, String uri, Generator action) {
         String[] verbs = new String[] {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"};
-        return addRoute(verbs, uri, action);
+        return addRoute(module, verbs, uri, action);
     }
     
-    public static boolean match(String[] methods, String uri, Generator action) {
-        return addRoute(methods, uri, action);
+    public static boolean match(String module, String[] methods, String uri, Generator action) {
+        return addRoute(module, methods, uri, action);
     }
     
-    protected static boolean addRoute(String[] methods, String uri, Generator action) {
-    	return routes.add(new RouteURI(methods, uri, action));
+    protected synchronized static boolean addRoute(String module, String[] methods, String uri, Generator action) {
+    	ArrayList<RouteURI> list = routes.get(module);
+    	if(null == list) {
+    		list = new ArrayList<>();
+    		routes.put(module, list);
+    	}
+    	return list.add(new RouteURI(methods, uri, action));
     }
     
     public String parseModule(String host) {
@@ -68,8 +76,10 @@ public class Router {
         return null;
     }
     
-    public RouteAction parseRoute(String uri) {
-        for (RouteURI route : routes) {
+    public RouteAction parseRoute(String module, String uri) {
+    	ArrayList<RouteURI> list = routes.get(module);
+    	if(null == list) return null;
+        for (RouteURI route : list) {
         	List<String> matches = DPUtil.getMatcher(route.getUri(), uri, true);
             if(matches.isEmpty()) continue ;
             Generator generator = route.getAction();
@@ -78,24 +88,25 @@ public class Router {
         }
         return null;
     }
-    /*
-    public function conventionRoute(uri, config) {
-        route = self::generateRoute(config["defaultControllerName"], config["defaultActionName"]);
-        uri = trim(uri, "/");
-        if(empty(uri)) return route;
-        uriArray = explode("/", uri);
-        length = count(uriArray);
-        route["controller"] = uriArray[0];
-        if(1 == length) return route;
-        route["action"] = uriArray[1];
-        if(2 == length) return route;
-        if(empty(config["allowPathParams"]) || length % 2 != 0) return null;
-        for (i = 2; i < length; i += 2) {
-            route["params"][uriArray[i]] = uriArray[i + 1];
+    
+    public RouteAction conventionRoute(String uri, Configuration config) {
+        RouteAction route = new RouteAction(config.getDefaultControllerName(), config.getDefaultActionName(), null);
+        uri = DPUtil.trim(uri, "/");
+        if("".equals(uri)) return route;
+        String[] uriArray = DPUtil.explode(uri, "/", null, false);
+        route.setControllerName(uriArray[0]);
+        if(1 == uriArray.length) return route;
+        route.setActionName(uriArray[1]);
+        if(2 == uriArray.length) return route;
+        if(DPUtil.empty(config.getAllowPathParams()) || uriArray.length % 2 != 0) return null;
+        Map<String, String[]> params = new LinkedHashMap<>();
+        for (int i = 2; i < uriArray.length; i += 2) {
+        	params.put(uriArray[i], new String[] {uriArray[i + 1]});
         }
+        route.setParams(params);
         return route;
     }
-    
+    /*
     private function invoke(Application app, module, route, args = null) {
         config = app->getApplicationConfig();
         webApplicationContext = WebApplicationContext::getInstance();
