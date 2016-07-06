@@ -18,7 +18,7 @@ repositories {
     mavenCentral()
 }
 // 依赖
-def springVersion = '4.3.1.RELEASE'
+def springVersion = '4.2.6.RELEASE'
 dependencies {
     providedRuntime ( // 不会打包进war
         
