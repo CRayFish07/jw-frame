@@ -5,7 +5,6 @@ import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Enumeration;
 import java.util.Vector;
 
@@ -13,7 +12,7 @@ import org.apache.log4j.Logger;
 
 /**
  * JDBC连接池
- * @author Ouyang
+ * @author Ouyang <iisquare@163.com>
  *
  */
 public class ConnectionPool {
@@ -21,9 +20,7 @@ public class ConnectionPool {
 	private String dbUrl = ""; // 数据 URL
 	private String dbUsername = ""; // 数据库用户名
 	private String dbPassword = ""; // 数据库用户密码
-	private boolean bCheckConnection = true; // 检查连接是否可用
-	private boolean usingIsValid = false; // 采用isValid函数验证链接
-	private String testTable = ""; // 测试连接是否可用的测试表名，默认没有测试表
+	private boolean isCheckValid = true; // 检查连接是否可用
 	private int initialConnections = 1; // 连接池的初始大小
 	private int incrementalConnections = 5;// 连接池自动增加的大小，0固定连接池大小，-1由程序判断
 	private int decrementalConnections = 5;// 连接池自动减少的大小，0不释放空闲连接，-1由程序判断
@@ -44,7 +41,7 @@ public class ConnectionPool {
 		try {
 			createPool();
 		} catch (Exception e) {
-			logger.debug("Create connection pool is fialed!");
+			if(logger.isDebugEnabled()) logger.debug("Create connection pool is fialed!");
 		}
 	}
 
@@ -80,28 +77,12 @@ public class ConnectionPool {
 		this.maxConnections = maxConnections;
 	}
 
-	public boolean isbCheckConnection() {
-		return bCheckConnection;
+	public boolean isCheckValid() {
+		return isCheckValid;
 	}
 
-	public void setbCheckConnection(boolean bCheckConnection) {
-		this.bCheckConnection = bCheckConnection;
-	}
-
-	public boolean isUsingIsValid() {
-		return usingIsValid;
-	}
-
-	public void setUsingIsValid(boolean usingIsValid) {
-		this.usingIsValid = usingIsValid;
-	}
-
-	public String getTestTable() {
-		return this.testTable;
-	}
-
-	public void setTestTable(String testTable) {
-		this.testTable = testTable;
+	public void setCheckValid(boolean isCheckValid) {
+		this.isCheckValid = isCheckValid;
 	}
 
 	public long getTimeEventInterval() {
@@ -124,7 +105,7 @@ public class ConnectionPool {
 		DriverManager.registerDriver(driver);
 		connections = new Vector<DBPooledConnection>();
 		createConnections(this.initialConnections);
-		logger.debug("Connection pool is created!");
+		if(logger.isDebugEnabled()) logger.debug("Connection pool is created!");
 	}
 
 	/**
@@ -133,13 +114,13 @@ public class ConnectionPool {
 	private synchronized void createConnections(int numConnections) throws SQLException {
 		for (int x = 0; x < numConnections; x++) {
 			if (this.maxConnections > 0 && this.connections.size() >= this.maxConnections) {
-				logger.debug("Connection pool is full!");
+				if(logger.isDebugEnabled()) logger.debug("Connection pool is full!");
 				break;
 			}
 			try {
 				connections.addElement(new DBPooledConnection(newConnection()));
 			} catch (SQLException e) {
-				logger.debug("Create new connection is failed!" + e.getMessage());
+				if(logger.isDebugEnabled()) logger.debug("Create new connection is failed!" + e.getMessage());
 				throw new SQLException();
 			}
 		}
@@ -197,7 +178,7 @@ public class ConnectionPool {
 			if (!pc.isBusy()) {
 				Connection conn = pc.getConnection();
 				pc.setBusy(true);
-				if (!isValid(conn)) {
+				if (isCheckValid && !conn.isValid(3000)) { // 超时时间设置，性能影响点
 					// 如果此连接不可再用了，则创建一个新的连接，
 					// 并替换此不可用的连接对象，如果创建失败，删除该无效连接，遍历下一个不忙连接
 					try {
@@ -216,38 +197,9 @@ public class ConnectionPool {
 
 	}
 
-	private boolean isValid(Connection conn) {
-		if(bCheckConnection) {
-			if(usingIsValid){
-				try {
-					return conn.isValid(3000);
-				} catch (SQLException e) {
-					logger.debug("Connection isValid not be supported in this jar!" + e.getMessage());
-					return false;
-				}
-			}else{
-				try {
-					if (testTable.equals("")) {
-						// 如果测试表为空，试着使用此连接的 setAutoCommit() 方法
-						// 来判断连接否可用（此方法只在部分数据库可用，如果不可用 ,
-						// 抛出异常）。注意：使用测试表的方法更可靠
-						conn.setAutoCommit(true);
-					} else {
-						Statement stmt = conn.createStatement();
-						stmt.execute("select count(*) from " + testTable);
-					}
-				} catch (SQLException e) {
-					closeConnection(conn);
-					return false;
-				}
-			}
-		}
-		return true;
-	}
-
 	public synchronized void returnConnection(Connection conn) {
 		if (connections == null) {
-			logger.debug("Connection pool is not exist!");
+			if(logger.isDebugEnabled()) logger.debug("Connection pool is not exist!");
 			return;
 		}
 		DBPooledConnection pConn = null;
@@ -302,7 +254,7 @@ public class ConnectionPool {
 		try {
 			conn.close();
 		} catch (SQLException e) {
-			logger.debug("Close connection has something wrong!" + e.getMessage());
+			if(logger.isDebugEnabled()) logger.debug("Close connection has something wrong!" + e.getMessage());
 		}
 
 	}
@@ -350,7 +302,9 @@ public class ConnectionPool {
 		if (connections == null) {
 			return;
 		}
-		logger.debug(prefixMessage + "Connection pool: totalSize - " + connections.size() + " usedSize - " + usedConnectionSize + postfixMessage);
+		if(logger.isDebugEnabled()) logger.debug(
+				prefixMessage + "Connection pool: totalSize - "
+				+ connections.size() + " usedSize - " + usedConnectionSize + postfixMessage);
 	}
 	
 	public synchronized int getNotUsedConnectionCount() {

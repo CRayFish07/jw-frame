@@ -9,7 +9,7 @@ import org.apache.log4j.Logger;
 
 /**
  * JDBC连接管理类，唯一实例，用于维护连接池
- * @author Ouyang
+ * @author Ouyang <iisquare@163.com>
  *
  */
 public class ConnectionManager {
@@ -41,7 +41,7 @@ public class ConnectionManager {
 		if (pool != null) {
 			pool.returnConnection(con);
 		} else {
-			logger.debug("Connection pool witch named " + name + " is null!");
+			if(logger.isDebugEnabled()) logger.debug("Connection pool witch named " + name + " is null!");
 		}
 	}
 
@@ -90,66 +90,26 @@ public class ConnectionManager {
 		}
 	}
 
-	/*public synchronized boolean init(String path) {
-		if(clients > 1) return false;
-		DomXmlBuilder xmlBuilder = null;
-		Element root = null;
-		Element[] tempElements = null;
-		xmlBuilder = new DomXmlBuilder(path);
-		root = xmlBuilder.getRoot();
-		tempElements = DomXmlOperator.getElementsByName(root, "connectionPool");
-		for (int i = 0; i < tempElements.length; i++) {
-			Element[] tes = null;
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "poolName");
-			String poolName = DomXmlOperator.getElementValue(tes[0]);
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "jdbcDriver");
-			String jdbcDriver = DomXmlOperator.getElementValue(tes[0]);
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "dbUrl");
-			String dbUrl = DomXmlOperator.getElementValue(tes[0]);
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "dbUsername");
-			String dbUsername = DomXmlOperator.getElementValue(tes[0]);
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "dbPassword");
-			String dbPassword = DomXmlOperator.getElementValue(tes[0]);
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "bCheckConnection");
-			boolean bCheckConnection = CharaterHandle.string2Boolean(DomXmlOperator.getElementValue(tes[0]));
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "usingIsValid");
-			boolean usingIsValid = CharaterHandle.string2Boolean(DomXmlOperator.getElementValue(tes[0]));
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "testTable");
-			String testTable = DomXmlOperator.getElementValue(tes[0]);
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "initialConnections");
-			int initialConnections = Integer.parseInt(DomXmlOperator.getElementValue(tes[0]));
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "incrementalConnections");
-			int incrementalConnections = Integer.parseInt(DomXmlOperator.getElementValue(tes[0]));
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "decrementalConnections");
-			int decrementalConnections = Integer.parseInt(DomXmlOperator.getElementValue(tes[0]));
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "maxConnections");
-			int maxConnections = Integer.parseInt(DomXmlOperator.getElementValue(tes[0]));
-			
-			tes = DomXmlOperator.getElementsByName(tempElements[i], "timeEventInterval");
-			long timeEventInterval = Long.parseLong(DomXmlOperator.getElementValue(tes[0]));
-			
-			DBConnectionPool pool = new DBConnectionPool(jdbcDriver, dbUrl, dbUsername, dbPassword);
-			pool.setbCheckConnection(bCheckConnection);
+	public boolean addPool(Connector connector, String dbUrl) {
+		if(pools.contains(dbUrl)) return true;
+		synchronized (ConnectionManager.class) {
+			if(pools.contains(dbUrl)) return true;
+			ConnectionPool pool = new ConnectionPool(
+					connector.getJdbcDriver(), dbUrl, connector.getUsername(), connector.getPassword());
+			Boolean isCheckValid = connector.getIsCheckValid();
+			Integer incrementalConnections = connector.getIncrementalConnections();
+			Integer decrementalConnections = connector.getDecrementalConnections();
+			Integer initialConnections = connector.getInitialConnections();
+			Integer maxConnections = connector.getMaxConnections();
+			Integer timeEventInterval = connector.getTimeEventInterval();
+			if(null != isCheckValid) pool.setCheckValid(isCheckValid);
 			pool.setIncrementalConnections(incrementalConnections);
 			pool.setDecrementalConnections(decrementalConnections);
 			pool.setInitialConnections(initialConnections);
 			pool.setMaxConnections(maxConnections);
-			pool.setUsingIsValid(usingIsValid);
-			pool.setTestTable(testTable);
 			pool.setTimeEventInterval(timeEventInterval);
-			pools.put(poolName, pool);
+			pools.put(dbUrl, pool);
 		}
 		return true;
-	}*/
+	}
 }
