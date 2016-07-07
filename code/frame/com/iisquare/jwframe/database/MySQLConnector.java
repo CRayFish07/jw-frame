@@ -1,7 +1,14 @@
 package com.iisquare.jwframe.database;
 
-public class MySQLConnection extends Connection {
+/**
+ * MySQL连接管理类，实例和单次请求绑定
+ * @author Ouyang
+ *
+ */
+public class MySQLConnector extends Connector {
 
+	
+	
 	/*private $username;
     private $password;
     private $dbname;

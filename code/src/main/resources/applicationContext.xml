@@ -19,7 +19,6 @@
             <list>
                 <value>classpath:application.properties</value>
                 <value>classpath:freemarker.properties</value>
-                <value>classpath:jdbc.properties</value>
             </list>
         </property>
     </bean>
