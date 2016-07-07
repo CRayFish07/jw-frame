@@ -115,31 +115,27 @@ public class MySQLConnector extends Connector {
     	if(null != masterResource) manager.returnConnection(masterUrl, masterResource);
     	if(null != slaveUrl) manager.returnConnection(slaveUrl, slaveResource);
     }
-    /*
-    public function getMaster() {
-        if($this->logger->isDebugEnabled()) {
-            $this->logger->debug('MySQLConnection - [master]'.(isset($this->masterResource) ? 'hit' : 'create')
-                .':'.'{host:'.$this->masterHost.';port:'.$this->masterProt.';dbname:'.$this->dbname.';dbuser:'.$this->username.'}');
+
+    public Connection getMaster() {
+        if(logger.isDebugEnabled()) {
+            logger.debug("MySQLConnection - [master]" + (null == masterResource ? "create" : "hit")
+                + ":{host:" + masterHost + ";port:" + masterPort + ";dbname:" + dbname + ";dbuser:" + username + "}");
         }
-        if(!isset($this->masterResource)) {
-            $this->masterResource = $this->getResource(true);
-        }
-        return $this->masterResource;
+        if(null == masterResource) masterResource = getResource(true);
+        return masterResource;
     }
     
-    public function getSlave() {
-        if($this->logger->isDebugEnabled()) {
-            $this->logger->debug('MySQLConnection - [slave]'.(isset($this->slaveResource) ? 'hit' : 'create')
-                .':'.'{host:'.$this->slaveHost.';port:'.$this->slavePort.';dbname:'.$this->dbname.';dbuser:'.$this->username.'}');
+    public Connection getSlave() {
+        if(logger.isDebugEnabled()) {
+            logger.debug("MySQLConnection - [slave]" + (null == slaveResource ? "create" : "hit")
+                + ":{host:" + slaveHost + ";port:" + slavePort + ";dbname:" + dbname + ";dbuser:" + username + "}");
         }
-        if(!isset($this->slaveResource)) {
-            $this->slaveResource = $this->getResource(false);
-        }
-        return $this->slaveResource;
+        if(null == slaveResource) slaveResource = getResource(false);
+        return slaveResource;
     }
     
-    public function isTransaction() {
-        return $this->transactionLevel > 0 && $this->masterResource && $this->masterResource->inTransaction();
+    /*public boolean isTransaction() {
+        return transactionLevel > 0 && null != masterResource && masterResource->inTransaction();
     }
     
     public function beginTransaction() {
