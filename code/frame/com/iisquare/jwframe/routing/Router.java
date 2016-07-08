@@ -1,5 +1,6 @@
 package com.iisquare.jwframe.routing;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.LinkedHashMap;
@@ -10,6 +11,7 @@ import java.util.Map.Entry;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 
@@ -27,6 +29,7 @@ public class Router {
     private String appUri, rootPath;
     private HttpServletRequest request;
 	private HttpServletResponse response;
+	private Logger logger = Logger.getLogger(getClass().getName());
     
     static {
     	domains.put("*", "frontend");
@@ -193,6 +196,15 @@ public class Router {
         String uri = request.getRequestURI();
         if(!uri.startsWith(appUri)) return new ApplicationException("app uri error!");
         uri = "/" + uri.substring(appUri.length());
+        // 默认编码设置
+        String characterEncoding = configuration.getCharacterEncoding();
+        try {
+			request.setCharacterEncoding(characterEncoding);
+		} catch (UnsupportedEncodingException e) {
+			logger.error(e.getMessage());
+		}
+		response.setCharacterEncoding(characterEncoding);
+		response.setContentType(configuration.getContentType());
         // 自定义路由检测
         RouteAction route = parseRoute(module, uri);
         // 约定路由检测
