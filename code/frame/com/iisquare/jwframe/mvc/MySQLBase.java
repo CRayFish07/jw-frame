@@ -1,6 +1,59 @@
 package com.iisquare.jwframe.mvc;
 
-public abstract class MySQLBase extends DaoBase {
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+
+import com.iisquare.jwframe.database.MySQLConnector;
+import com.iisquare.jwframe.database.MySQLConnectorManager;
+
+public abstract class MySQLBase extends DaoBase implements ApplicationContextAware {
+	
+	private MySQLConnectorManager connectorManager;
+	private MySQLConnector connector;
+	
+	public void setApplicationContext(ApplicationContext context) {
+		if(null != connectorManager) return ;
+		connectorManager = context.getBean(MySQLConnectorManager.class);
+		reload();
+	}
+	
+	public MySQLBase() {
+	}
+	
+	public boolean reload() {
+		if(null == connectorManager) return false;
+		if(null != connector) connector.close();
+		connector = connectorManager.getConnector(dbName(), charset());
+		if(null == connector) return false;
+		return true;
+	}
+	
+	/**
+	 * 数据库名称，返回空采用配置文件中的默认值
+	 */
+	public String dbName() {
+		return null;
+	}
+
+	/**
+	 * 数据库编码，返回空采用配置文件中的默认值
+	 */
+	public String charset() {
+		return null;
+	}
+
+	/**
+	 * 数据库表前缀
+	 */
+	protected String tablePrefix() {
+	    return connector.getTablePrefix();
+	}
+
+	/**
+	 * 数据库表名称
+	 */
+	public abstract String tableName();
+	
 //    const PARAM_PREFIX = ':qp';
 //    
 //    private static $retry = 3; // 失败重连次数
@@ -35,31 +88,7 @@ public abstract class MySQLBase extends DaoBase {
 //        if(null == $this->connection) throw Exception('MySQLConnection::getInstance failed!');
 //    }
 //    
-//    /**
-//     * 数据库名称，返回空采用配置文件中的默认值
-//     */
-//    public function dbName() {
-//        return null;
-//    }
-//    
-//    /**
-//     * 数据库编码，返回空采用配置文件中的默认值
-//     */
-//    public function charset() {
-//        return null;
-//    }
-//    
-//    /**
-//     * 数据库表前缀
-//     */
-//    protected function tablePrefix() {
-//        return $this->connection->getTablePrefix();
-//    }
-//    
-//    /**
-//     * 数据库表名称
-//     */
-//    abstract public function tableName();
+
 //    
 //    /**
 //     * 表字段数组
@@ -671,8 +700,8 @@ public abstract class MySQLBase extends DaoBase {
 //        $this->connection->commit();
 //    }
 //    
-//    public function rollBack() {
-//        $this->connection->rollBack();
+//    public function rollback() {
+//        $this->connection->rollback();
 //    }
 //    
 //    /**

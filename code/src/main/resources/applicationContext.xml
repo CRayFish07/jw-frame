@@ -44,4 +44,14 @@
         <property name="applicationConfiguration" ref="configuration" />
     </bean>
  
+    <bean id="dbConnectionManager" class="com.iisquare.jwframe.database.ConnectionManager"
+        factory-method="getInstance" scope="singleton" destroy-method="release" />
+        
+    <bean id="dbMySQLConnectorManager"
+        class="com.iisquare.jwframe.database.MySQLConnectorManager" scope="request" destroy-method="release">
+        <constructor-arg>
+            <ref bean="dbConnectionManager" />
+        </constructor-arg>
+    </bean>
+ 
 </beans>

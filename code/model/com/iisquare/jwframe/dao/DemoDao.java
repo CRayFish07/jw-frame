@@ -9,4 +9,9 @@ import com.iisquare.jwframe.mvc.MySQLBase;
 @Scope("prototype")
 public class DemoDao extends MySQLBase {
 
+	@Override
+	public String tableName() {
+		return tablePrefix() + "demo";
+	}
+
 }

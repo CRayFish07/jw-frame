@@ -2,7 +2,6 @@ package com.iisquare.jwframe.database;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -13,12 +12,14 @@ import com.iisquare.jwframe.utils.DPUtil;
 
 /**
  * MySQL主从连接管理类
+ * 若多个DAO使用同一个实例，仅在最后一次执行commit/rollback的时候，事务才生效。
+ * 开发者需要自行判断多个DAO是否使用同一个实例，用来处理事务的最终状态。
  * @author Ouyang <iisquare@163.com>
  *
  */
 public class MySQLConnector extends Connector {
 
-	private String dbname;
+	private String dbName;
 	private String charset;
 	private String tablePrefix;
 	private String masterHost;
@@ -29,11 +30,9 @@ public class MySQLConnector extends Connector {
     private Connection slaveResource;
     private int transactionLevel = 0;
     private String masterUrl, slaveUrl;
+    private ConnectionManager connectionManager;
     private Logger logger = Logger.getLogger(getClass().getName());
     
-    private static ConnectionManager manager = ConnectionManager.getInstance();
-    private static Map<String, MySQLConnector> connectors = new Hashtable<>();
-	
     /**
      * 获取数据库表前缀
      */
@@ -42,9 +41,11 @@ public class MySQLConnector extends Connector {
 	}
 
 	@SuppressWarnings("unchecked")
-	private MySQLConnector(Map<String, Object> config, String dbName, String charset) {
+	public MySQLConnector(ConnectionManager connectionManager,
+			Map<String, Object> config, String dbName, String charset) {
+		this.connectionManager = connectionManager;
 		jdbcDriver = JDBCDRIVER_MYSQL;
-		this.dbname = dbName;
+		this.dbName = dbName;
 		this.charset = charset;
 		Object temp;
 		temp = config.get("username");
@@ -77,34 +78,19 @@ public class MySQLConnector extends Connector {
 			slaveHost =  DPUtil.parseString(slaverMap.get("host"));;
 			slavePort = DPUtil.parseInt(slaverMap.get("port"));
 		}
-		masterUrl = "jdbc:mysql://" + masterHost + ":" + masterPort + "/" + dbname;
-		slaveUrl = "jdbc:mysql://" + slaveHost + ":" + slavePort + "/" + dbname;
+		masterUrl = "jdbc:mysql://" + masterHost + ":" + masterPort + "/" + this.dbName;
+		slaveUrl = "jdbc:mysql://" + slaveHost + ":" + slavePort + "/" + this.dbName;
 		if(!DPUtil.empty(this.charset)) {
 			masterUrl += "?characterEncoding=" + this.charset;
 			slaveUrl += "?characterEncoding=" + this.charset;
 		}
 	}
 	
-    public static MySQLConnector getInstance(String dbName, String charset) {
-    	Map<String, Object> config = loadConfig(DBTYPE_MYSQL); // config为引用对象，不可覆盖
-    	if(null == dbName) dbName = DPUtil.parseString(config.get("dbname"));
-		if(null == charset) charset = DPUtil.parseString(config.get("charset"));
-        String key = "___" + dbName + "___" + charset + "___";
-        if(!connectors.containsKey(key)) {
-        	synchronized (MySQLConnector.class) {
-        		if(!connectors.containsKey(key)) {
-        			connectors.put(key, new MySQLConnector(config, dbName, charset));
-        		}
-        	}
-        }
-        return connectors.get(key);
-    }
-    
     private Connection getResource(boolean isMaster) {
     	String dbUrl = isMaster ? masterUrl : slaveUrl;
-        if(!manager.addPool(this, dbUrl)) return null;
+        if(!connectionManager.addPool(this, dbUrl)) return null;
         try {
-			return manager.getConnection(dbUrl);
+			return connectionManager.getConnection(dbUrl, 300);
 		} catch (SQLException e) {
 			logger.error(e.getMessage());
 			return null;
@@ -112,14 +98,20 @@ public class MySQLConnector extends Connector {
     }
     
     public void close() {
-    	if(null != masterResource) manager.returnConnection(masterUrl, masterResource);
-    	if(null != slaveUrl) manager.returnConnection(slaveUrl, slaveResource);
+    	if(null != masterResource) {
+    		connectionManager.returnConnection(masterUrl, masterResource);
+    		masterResource = null;
+    	}
+    	if(null != slaveUrl) {
+    		connectionManager.returnConnection(slaveUrl, slaveResource);
+    		slaveUrl = null;
+    	}
     }
 
     public Connection getMaster() {
         if(logger.isDebugEnabled()) {
             logger.debug("MySQLConnection - [master]" + (null == masterResource ? "create" : "hit")
-                + ":{host:" + masterHost + ";port:" + masterPort + ";dbname:" + dbname + ";dbuser:" + username + "}");
+                + ":{host:" + masterHost + ";port:" + masterPort + ";dbname:" + dbName + ";dbuser:" + username + "}");
         }
         if(null == masterResource) masterResource = getResource(true);
         return masterResource;
@@ -128,56 +120,76 @@ public class MySQLConnector extends Connector {
     public Connection getSlave() {
         if(logger.isDebugEnabled()) {
             logger.debug("MySQLConnection - [slave]" + (null == slaveResource ? "create" : "hit")
-                + ":{host:" + slaveHost + ";port:" + slavePort + ";dbname:" + dbname + ";dbuser:" + username + "}");
+                + ":{host:" + slaveHost + ";port:" + slavePort + ";dbname:" + dbName + ";dbuser:" + username + "}");
         }
         if(null == slaveResource) slaveResource = getResource(false);
         return slaveResource;
     }
     
-    /*public boolean isTransaction() {
-        return transactionLevel > 0 && null != masterResource && masterResource->inTransaction();
+    public boolean isTransaction() {
+        try {
+			return transactionLevel > 0 && null != masterResource && !masterResource.getAutoCommit();
+		} catch (SQLException e) {
+			logger.error(e.getMessage());
+			return false;
+		}
     }
     
-    public function beginTransaction() {
-        if ($this->logger->isDebugEnabled()) {
-            $this->logger->debug("MySQL - Begin transaction by Level:{$this->transactionLevel}");
+    public boolean beginTransaction() {
+        if (logger.isDebugEnabled()) {
+            logger.debug("MySQL - Begin transaction by Level:" + transactionLevel);
         }
-        if ($this->transactionLevel === 0) {
-            $this->transactionLevel = 1;
-            return $this->getMaster()->beginTransaction();
+        if (transactionLevel == 0) {
+            transactionLevel = 1;
+            try {
+				getMaster().setAutoCommit(false);
+			} catch (SQLException e) {
+				logger.error(e.getMessage());
+				return false;
+			}
         }
-        $this->transactionLevel++;
+        transactionLevel++;
         return true;
     }
     
-    public function commit() {
-        if (!$this->isTransaction()) {
+    public boolean commit() {
+        if (!isTransaction()) {
             return false;
         }
-        $this->transactionLevel--;
-        if ($this->logger->isDebugEnabled()) {
-            $this->logger->debug("Commit transaction by Level:{$this->transactionLevel}");
+        transactionLevel--;
+        if (logger.isDebugEnabled()) {
+            logger.debug("Commit transaction by Level:" + transactionLevel);
         }
-        if ($this->transactionLevel === 0) {
-            return $this->getMaster()->commit();
+        if (transactionLevel == 0) {
+            try {
+				getMaster().commit();
+				return true;
+			} catch (SQLException e) {
+				logger.error(e.getMessage());
+				return false;
+			}
         }
+        return true;
     }
     
-    public function rollBack() {
-        if (!$this->isTransaction()) {
+    public boolean rollback() {
+        if (!isTransaction()) {
             return false;
         }
-        $this->transactionLevel--;
-        if ($this->transactionLevel === 0) {
-            if ($this->logger->isDebugEnabled()) {
-                $this->logger->debug("Rollback transaction by Level:{$this->transactionLevel}");
+        transactionLevel--;
+        if (transactionLevel == 0) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Rollback transaction by Level:" + transactionLevel);
             }
-            return $this->getMaster()->rollBack();
+            try {
+				getMaster().rollback();
+				return true;
+			} catch (SQLException e) {
+				logger.error(e.getMessage());
+				return false;
+			}
         }
+        return true;
     }
-    
-    public function __destruct() {
-        $this->close();
-    }*/
-	
+
 }
