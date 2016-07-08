@@ -22,6 +22,10 @@ public class DemoService extends ServiceBase {
         return $this->demoDao->where(['status' => 1])->orderBy('id desc')->limit(30)->all();
     }*/
 	
+	public void getList() {
+		System.out.println(demoDao.tableName());
+	}
+	
 	public String getMessage() {
         return "it works!";
     }

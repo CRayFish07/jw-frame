@@ -9,7 +9,7 @@ import org.apache.log4j.Logger;
 
 /**
  * JDBC连接池管理类
- * 全局(单应用)内唯一，内部维护clientCount计数器，用来管理连接池。
+ * 全局(单应用)内唯一，内部维护clients计数器，用来管理连接池。
  * 若频繁getInstance获取实例，会严重影响性能！应用销毁时需要调用release方法，减少引用计数。
  * @author Ouyang <iisquare@163.com>
  *
@@ -20,7 +20,7 @@ public class ConnectionManager {
 	
 	private static int clients = 0;
 	private static Hashtable<String, ConnectionPool> pools = new Hashtable<>(); // 连接
-	private Logger logger = Logger.getLogger(getClass().getName());
+	private static Logger logger = Logger.getLogger(ConnectionManager.class);
 
 	public static int getClients() {
 		return clients;
@@ -35,6 +35,7 @@ public class ConnectionManager {
 			}
 		}
 		clients++;
+		if(logger.isDebugEnabled()) logger.debug("ConnectionManager.getInstance - current client count:" + clients);
 		return instance;
 	}
 	
@@ -77,7 +78,9 @@ public class ConnectionManager {
 	}
 	
 	public synchronized void release() throws SQLException {
-		if (--clients != 0) return;
+		clients--;
+		if(logger.isDebugEnabled()) logger.debug("ConnectionManager.release - current client count:" + clients);
+		if (0 != clients) return;
 		Enumeration<ConnectionPool> allPools = pools.elements();
 		while (allPools.hasMoreElements()) {
 			ConnectionPool pool = (ConnectionPool) allPools.nextElement();

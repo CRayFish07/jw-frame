@@ -1,28 +1,29 @@
 package com.iisquare.jwframe.mvc;
 
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.context.WebApplicationContext;
 
 import com.iisquare.jwframe.database.MySQLConnector;
 import com.iisquare.jwframe.database.MySQLConnectorManager;
 
-public abstract class MySQLBase extends DaoBase implements ApplicationContextAware {
+public abstract class MySQLBase extends DaoBase {
 	
+	@Autowired
+	private WebApplicationContext webApplicationContext;
 	private MySQLConnectorManager connectorManager;
 	private MySQLConnector connector;
-	
-	public void setApplicationContext(ApplicationContext context) {
-		if(null != connectorManager) return ;
-		connectorManager = context.getBean(MySQLConnectorManager.class);
-		reload();
-	}
 	
 	public MySQLBase() {
 	}
 	
+	@PostConstruct
 	public boolean reload() {
-		if(null == connectorManager) return false;
-		if(null != connector) connector.close();
+		if(null == connectorManager) {
+			connectorManager = webApplicationContext.getBean(MySQLConnectorManager.class);
+		}
+		// 不需要调用Connector.close()，全部由ConnectorManager托管
 		connector = connectorManager.getConnector(dbName(), charset());
 		if(null == connector) return false;
 		return true;

@@ -4,6 +4,8 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.log4j.Logger;
+
 import com.iisquare.jwframe.utils.DPUtil;
 
 /**
@@ -16,12 +18,15 @@ import com.iisquare.jwframe.utils.DPUtil;
 public class MySQLConnectorManager extends ConnectorManager {
 
 	private Map<String, MySQLConnector> connectors = new Hashtable<>();
+	private Logger logger = Logger.getLogger(getClass().getName());
 	
 	public MySQLConnectorManager(ConnectionManager connectionManager) {
 		super(connectionManager);
+		if(logger.isDebugEnabled()) logger.debug("MySQLConnector is called!");
 	}
 
 	public MySQLConnector getConnector(String dbName, String charset) {
+		if(logger.isDebugEnabled()) logger.debug("MySQLConnectorManager.getConnector - dbName:" + dbName + ", charset:" + charset);
     	Map<String, Object> config = loadConfig(Connector.DBTYPE_MYSQL); // config为引用对象，不可覆盖
     	if(null == dbName) dbName = DPUtil.parseString(config.get("dbname"));
 		if(null == charset) charset = DPUtil.parseString(config.get("charset"));
@@ -37,6 +42,7 @@ public class MySQLConnectorManager extends ConnectorManager {
     }
     
     public void release() {
+    	if(logger.isDebugEnabled()) logger.debug("MySQLConnectorManager.release - current connector count:" + connectors.size());
     	if(connectors.isEmpty()) return ;
     	synchronized (MySQLConnectorManager.class) {
     		if(connectors.isEmpty()) return ;

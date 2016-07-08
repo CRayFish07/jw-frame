@@ -25,5 +25,10 @@ public class IndexController extends CoreController {
 		assign("date", StringEscapeUtils.escapeHtml(getParam("date")));
 		assign("id", DPUtil.parseInt(getParam("id")));
 		return displayMessage(0, "news working!", assign);
-	} 
+	}
+	
+	public Object listAction() throws Exception {
+		demoService.getList();
+		return displayMessage(0, null, null);
+	}
 }
