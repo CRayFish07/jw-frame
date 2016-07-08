@@ -1,5 +1,6 @@
 package com.iisquare.jwframe.database;
 
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +41,7 @@ public abstract class ConnectorManager {
     }
     
     private static Map<String, Object> loadMySQLConfig(Properties prop) {
-    	Map<String, Object> configMap = new Hashtable<>();
+    	Map<String, Object> configMap = new HashMap<>();
     	configMap.put("dbname", prop.getProperty("mysql.dbname"));
     	configMap.put("username", prop.getProperty("mysql.username"));
     	configMap.put("password", prop.getProperty("mysql.password"));
@@ -56,20 +57,20 @@ public abstract class ConnectorManager {
     	String[] stringArray;
     	// 主库配置
     	String master = prop.getProperty("mysql.master");
-    	Map<String, Object> masterMap = new Hashtable<>();
+    	Map<String, Object> masterMap = new HashMap<>();
     	stringArray = DPUtil.explode(master, ":", " ", false);
     	if(2 == stringArray.length) {
     		masterMap.put("host", stringArray[0]);
     		masterMap.put("port", stringArray[1]);
     	}
-    	configMap.put("master", master);
+    	configMap.put("master", masterMap);
     	// 从库配置
     	String slaves = prop.getProperty("mysql.slaves");
     	List<Map<String, Object>> slavesList = new Vector<>();
     	for (String slave : DPUtil.explode(slaves, ",", " ", false)) {
     		stringArray = DPUtil.explode(slave, ":", " ", false);
     		if(2 != stringArray.length) continue;
-    		Map<String, Object> slaveMap = new Hashtable<>();
+    		Map<String, Object> slaveMap = new HashMap<>();
     		slaveMap.put("host", stringArray[0]);
     		slaveMap.put("port", stringArray[1]);
     		slavesList.add(slaveMap);
