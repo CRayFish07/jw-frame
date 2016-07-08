@@ -163,6 +163,7 @@ public class MySQLConnector extends Connector {
         if (transactionLevel == 0) {
             try {
 				getMaster().commit();
+				getMaster().setAutoCommit(true);
 				return true;
 			} catch (SQLException e) {
 				logger.error(e.getMessage());
