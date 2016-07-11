@@ -1,5 +1,9 @@
 package com.iisquare.jwframe.mvc;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,13 +14,30 @@ import com.iisquare.jwframe.database.MySQLConnectorManager;
 
 public abstract class MySQLBase extends DaoBase {
 	
+	public static final String PARAM_PREFIX = ":qp";
 	@Autowired
 	private WebApplicationContext webApplicationContext;
 	private MySQLConnectorManager connectorManager;
 	private MySQLConnector connector;
+	private int timeout = 250; // 获取连接超时时间
+	private Object where;
+	private Integer limit;
+	private Integer offset;
+	private Object orderBy;
+	private Object select;
+	private Object selectOption;
+	private Object distinct;
+	private Object groupBy;
+	private Object join;
+	private Object having;
+	private Object resource; // 当前连接资源
+	private Object statement; // 当前预处理对象
+	private Object _pendingParams;
+	private String sql;
+	private Exception exception;
+	private boolean isMaster = false;
 	
-	public MySQLBase() {
-	}
+	public MySQLBase() {}
 	
 	@PostConstruct
 	public boolean reload() {
@@ -55,91 +76,55 @@ public abstract class MySQLBase extends DaoBase {
 	 */
 	public abstract String tableName();
 	
-//    const PARAM_PREFIX = ':qp';
-//    
-//    private static $retry = 3; // 失败重连次数
-//    private $where;
-//    private $limit;
-//    private $offset;
-//    private $orderBy;
-//    private $select;
-//    private $selectOption;
-//    private $distinct;
-//    private $groupBy;
-//    private $join;
-//    private $having;
-//    private $connection;
-//    private $resource; // 当前连接资源
-//    private $statement; // 当前预处理对象
-//    private $_pendingParams = [];
-//    private $sql;
-//    private $errorCode;
-//    private $errorMsg;
-//    private $isMaster = false;
-//    
-//    private function __clone() {}
-//    
-//    public function __construct() {
-//        parent::__construct();
-//        $this->init();
-//    }
-//    
-//    public function init() {
-//        $this->connection = MySQLConnection::getInstance($this->dbName(), $this->charset());
-//        if(null == $this->connection) throw Exception('MySQLConnection::getInstance failed!');
-//    }
-//    
+	/**
+	 * 设置连接超时时间，0为无限等待
+	 */
+	public void setTimeout(int timeout) {
+		this.timeout = timeout;
+	}
 
-//    
-//    /**
-//     * 表字段数组
-//     */
-//    abstract public function collumnNames();
-//    
-//    /**
-//     * 预处理表数据
-//     */
-//    public function prepareData($data) {
-//        $collumns = $this->collumnNames();
-//        foreach ($data as $name => $value) {
-//            if (!key_exists($name, $collumns)) {
-//                unset($data[$name]);
-//            }
-//        }
-//        return $data;
-//    }
-//    
-//    /**
-//     * 切换表主从模式
-//     * @param boolean $master true 读写全为主库，false 写主读从
-//     */
-//    public function setMaster($master = true) {
-//        $this->isMaster = $master;
-//        return $this;
-//    }
-//    
-//    /**
-//     * 设置库断开后，偿试重新连接并执行的次数 0为不偿试重连
-//     */
-//    public function setRetry($retry) {
-//        self::$retry = $retry;
-//        return $this;
-//    }
-//    
-//    /**
-//     * 最后一次执行的SQL语句(不含值)
-//     */
-//    public function getLastSql() {
-//        return $this->sql;
-//    }
-//    
-//    /**
-//     * 最后一次执行的错误，执行成功时不会修改该返回值
-//     */
-//    public function getLastError() {
-//        return $this->errorMsg;
-//    }
-//    
+	/**
+     * 切换表主从模式
+     * @param boolean isMaster true 读写全为主库，false 写主读从
+     */
+    public void setMaster(boolean isMaster) {
+        this.isMaster = isMaster;
+    }
+    
+    /**
+     * 表字段数组
+     */
+    public abstract LinkedHashMap<String, Map<String, Object>> columns();
+    
+    /**
+     * 预处理表数据
+     */
+    public LinkedHashMap<String, Object> prepareData(Map<String, Object> data) {
+    	if(null == data) return null;
+    	LinkedHashMap<String, Object> result = new LinkedHashMap<>();
+    	LinkedHashMap<String, Map<String, Object>> collumnNames = columns();
+    	for(Entry<String, Map<String, Object>> entry : collumnNames.entrySet()) {
+    		String key = entry.getKey();
+    		if(!data.containsKey(key)) continue ;
+    		result.put(key, entry.getValue());
+    	}
+    	return result;
+    }
+    
+    /**
+     * 最后一次执行的SQL语句(不含值)
+     */
+    public String getLastSql() {
+        return sql;
+    }
+    
+    /**
+     * 最后一次执行的异常，执行成功时不会修改该返回值
+     */
+    public Exception getLastException() {
+        return exception;
+    }
+    
 //    /**
 //     * 方法用来指定 SQL 语句当中的 SELECT 子句 默认为 *
 //     * $query->select(['id', 'email']); 等同于 $query->select('id, email');

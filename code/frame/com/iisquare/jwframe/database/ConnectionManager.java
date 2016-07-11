@@ -40,6 +40,7 @@ public class ConnectionManager {
 	}
 	
 	public void returnConnection(String name, Connection con) {
+		if(null == con) return ;
 		ConnectionPool pool = pools.get(name);
 		if (pool != null) {
 			pool.returnConnection(con);
@@ -65,12 +66,12 @@ public class ConnectionManager {
 			long startTime = System.currentTimeMillis();
 			Connection con;
 			while ((con = pool.getConnection()) == null) {
-				try {
-					Thread.sleep(250);
-				} catch (InterruptedException e) {}
 				if (timeout >= 0 && (System.currentTimeMillis() - startTime) >= timeout) {
 					return null;
 				}
+				try {
+					Thread.sleep(250);
+				} catch (InterruptedException e) {}
 			}
 			return con;
 		}
