@@ -11,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,8 +40,9 @@ public abstract class MySQLBase extends DaoBase {
 	private Integer offset;
 	private List<String[]> join;
 	private String sql;
-	private Exception exception;
+	private SQLException exception;
 	private Map<String, Object> pendingParams = new LinkedHashMap<>();
+	private boolean transientNeedUpdate = false; // 插入失败时转为更新，执行insert之后自动设置为false
 	
 	public MySQLBase() {}
 	
@@ -106,6 +106,13 @@ public abstract class MySQLBase extends DaoBase {
     }
     
     /**
+     * 插入失败时转为更新，执行insert之后自动设置为false
+     */
+    public void transientNeedUpdate() {
+    	transientNeedUpdate = true;
+    }
+    
+    /**
      * 表字段数组
      */
     public abstract LinkedHashMap<String, Map<String, Object>> columns();
@@ -123,6 +130,14 @@ public abstract class MySQLBase extends DaoBase {
     		result.put(key, entry.getValue());
     	}
     	return result;
+    }
+    
+    /**
+     * 要完成自动建表时，子类需要复写该方法
+     * @return boolean 建表成功需要返回true 否则返回false
+     */
+    protected boolean createTable() {
+        return false;
     }
     
     /**
@@ -294,10 +309,7 @@ public abstract class MySQLBase extends DaoBase {
     private boolean execute(boolean forRead, int retry) {
         if(null == sql || "".equals(sql)) return false;
         try {
-        	if(null != statement) {
-            	statement.close();
-            	statement = null;
-            }
+        	close();
             if(isMaster || connector.isTransaction()) forRead = false;
             resource = forRead ? connector.getSlave() : connector.getMaster();
 			statement = resource.prepareStatement(sql);
@@ -352,10 +364,7 @@ public abstract class MySQLBase extends DaoBase {
 		} catch (Exception e) {
 			return null;
 		} finally {
-			try {
-				statement.close();
-				statement = null;
-			} catch (SQLException e) {}
+			close();
 		}
     }
 	
@@ -413,50 +422,60 @@ public abstract class MySQLBase extends DaoBase {
         return count().intValue() > 0;
     }
     
-
-//    
-//    /**
-//     * 返回多行单值
-//     */
-//    public function column() {
-//        return $this->all(PDO::FETCH_COLUMN);
-//    }
-//    
-
-//    
-//    /**
-//     * 单条插入
-//     * @param array $data 插入的数据是以表字段名为下标的数组，如：['name' => 'Sam','age' => 30]
-//     * @param type $needUpdate
-//     */
-//    public function insert($data, $needUpdate = false) {
-//        $params = [];
-//        $names = [];
-//        $placeholders = [];
-//        $this->prepareData($data);
-//        foreach ($data as $name => $value) {
-//            $names[] = $this->quoteColumnName($name);
-//            $phName = self::PARAM_PREFIX . count($params);
-//            $placeholders[] = $phName;
-//            $params[$phName] = $value;
-//        }
-//        $this->sql = 'INSERT INTO ' . $this->tableName()
-//        . (!empty($names) ? ' (' . implode(', ', $names) . ')' : '')
-//        . (!empty($placeholders) ? ' VALUES (' . implode(', ', $placeholders) . ')' : ' DEFAULT VALUES');
-//        if ($needUpdate) {
-//            $this->sql .= $this->duplicateUpdate($names);
-//        }
-//        $this->bindValues($params);
-//        $ret = $this->execute(false, self::$retry);
-//        if ($ret) {
-//            return $this->resource->lastInsertId();
-//        } else if ($this->errorCode == '42S02' && $this->createTable()) {
-//            return $this->insert($data, $needUpdate);
-//        } else {
-//            return null;
-//        }
-//    }
-//    
+    private Number lastInsertId(PreparedStatement statement) {
+		try {
+			ResultSet keys = statement.getGeneratedKeys();
+			if(keys.next()) {
+	    		return (Number) keys.getObject(1);
+	    	}
+			return null;
+		} catch (SQLException e) {
+			return null;
+		}
+    }
+    
+    /**
+     * 单条插入
+     */
+    public Number insert(Map<String, Object> data) {
+    	boolean needUpdate = transientNeedUpdate;
+    	transientNeedUpdate = false;
+    	data = prepareData(data);
+    	Map<String, Object> params = new LinkedHashMap<>(); // 字段参数值
+    	int i = 0;
+    	for(Entry<String, Object> entry : data.entrySet()) {
+    		String key = entry.getKey() + i++;
+    		params.put(key, entry.getValue());
+    	}
+    	StringBuilder sb = new StringBuilder();
+    	sb.append("INSERT INTO ").append(tableName());
+    	sb.append(" (").append(DPUtil.implode(",", DPUtil.collectionToStringArray(data.keySet()))).append(")");
+    	sb.append(" VALUES (").append(DPUtil.implode(",", DPUtil.collectionToArray(params.keySet()))).append(")");
+    	if(needUpdate) sb.append(""); // TODO duplicateUpdate
+    	bindValues(params);
+    	if(execute(false, retry)) {
+    		Number lastId = lastInsertId(statement);
+    		close();
+    		return lastId;
+    	} else if(null != exception && "42S02".equals(exception.getErrorCode()) && createTable()) { // TODO 42S02
+    		transientNeedUpdate = needUpdate;
+    		return insert(data);
+    	}
+    	return null;
+    }
+    
+    private void close() {
+    	if(null != statement) {
+    		try {
+				statement.close();
+			} catch (SQLException e) {
+				
+			} finally {
+				statement = null;
+			}
+    	}
+    }
+    
 //    /**
 //     * 批量插入
 //     * @param array $datas 插入的数据是以表字段名为下标的二维数组，如：[['name' => 'Sam1','age' => 30],['name' => 'Sam1','age' => 40]]
@@ -617,13 +636,7 @@ public abstract class MySQLBase extends DaoBase {
 //        $this->connection->rollback();
 //    }
 //    
-//    /**
-//     * 要完成自动建表时，子类需要复写该方法
-//     * @return boolean 建表成功需要返回true 否则返回false
-//     */
-//    protected function createTable() {
-//        return false;
-//    }
+    
 
 
 //    
@@ -673,20 +686,7 @@ public abstract class MySQLBase extends DaoBase {
 //            return "'" . addcslashes(str_replace("'", "''", $str), "\000\n\r\\\032") . "'";
 //        }
 //    }
-//    
-//    private function quoteColumnName($name) {
-//        if (strpos($name, '(') !== false || strpos($name, '[[') !== false || strpos($name, '{{') !== false) {
-//            return $name;
-//        }
-//        if (($pos = strrpos($name, '.')) !== false) {
-//            $prefix = $this->quoteTableName(substr($name, 0, $pos)) . '.';
-//            $name = substr($name, $pos + 1);
-//        } else {
-//            $prefix = '';
-//        }
-//        return $prefix . $this->quoteSimpleColumnName($name);
-//    }
-//    
+
 //    private function isReadQuery($sql) {
 //        $pattern = '/^\s*(SELECT|SHOW|DESCRIBE)\b/i';
 //        return preg_match($pattern, $sql) > 0;
