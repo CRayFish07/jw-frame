@@ -465,14 +465,15 @@ public abstract class MySQLBase extends DaoBase {
     	Map<String, Object> params = new LinkedHashMap<>(); // 字段参数值
     	int i = 0;
     	for(Entry<String, Object> entry : data.entrySet()) {
-    		String key = entry.getKey() + i++;
-    		params.put(key, entry.getValue());
+    		String qpKey = PARAM_PREFIX + i++;
+    		params.put(qpKey, entry.getValue());
     	}
     	StringBuilder sb = new StringBuilder();
     	sb.append("INSERT INTO ").append(tableName());
     	sb.append(" (").append(DPUtil.implode(", ", DPUtil.collectionToStringArray(data.keySet()))).append(")");
     	sb.append(" VALUES (").append(DPUtil.implode(", ", DPUtil.collectionToArray(params.keySet()))).append(")");
     	if(needUpdate) sb.append(""); // TODO duplicateUpdate
+    	sql = sb.toString();
     	bindValues(params);
     	if(null != executeUpdate(retry)) {
     		Number lastId = lastInsertId(statement);
@@ -525,6 +526,7 @@ public abstract class MySQLBase extends DaoBase {
     	sb.append(" (").append(DPUtil.implode(", ", DPUtil.collectionToStringArray(keys))).append(")");
     	sb.append(" VALUES ").append(DPUtil.implode(", ", DPUtil.collectionToArray(values)));
     	if(needUpdate) sb.append(""); // TODO duplicateUpdate
+    	sql = sb.toString();
     	if(null != executeUpdate(retry)) {
     		Number lastId = lastInsertId(statement);
     		close();
@@ -536,50 +538,38 @@ public abstract class MySQLBase extends DaoBase {
     	return null;
     }
     
-//    /**
-//     * 更新并返回更新的行数
-//     * @param arrya $data 数组数据 ['name' => 'Sam1','age' => 30]
-//     * @param string|array $condition 参见 where()
-//     * @param array $params 索引参数占位符的查询参数数组
-//     */
-//    public function update($data, $condition = '', $params = []) {
-//        $lines = [];
-//        $this->prepareData($data);
-//        foreach ($data as $name => $value) {
-//            $phName = self::PARAM_PREFIX . count($params);
-//            $lines[] = $this->quoteColumnName($name) . '=' . $phName;
-//            $params[$phName] = $value;
-//        }
-//        $sql = 'UPDATE ' . $this->tableName() . ' SET ' . implode(', ', $lines);
-//        $where = $this->buildWhere($condition, $params);
-//        $this->sql = $where === '' ? $sql : $sql . ' ' . $where;
-//        $this->bindValues($params);
-//        $ret = $this->execute(false, self::$retry);
-//        if ($ret) {
-//            return $this->statement->rowCount();
-//        } else {
-//            return null;
-//        }
-//    }
-//    
-//    /**
-//     * 删除并返回删除的行数
-//     * @param string|array $condition 参见 where()
-//     * @param array $params 索引参数占位符的查询参数数组
-//     */
-//    public function delete($condition = '', $params = []) {
-//        $sql = 'DELETE FROM ' . $this->tableName();
-//        $where = $this->buildWhere($condition, $params);
-//        $this->sql = $where === '' ? $sql : $sql . ' ' . $where;
-//        $this->bindValues($params);
-//        $ret = $this->execute(false, self::$retry);
-//        if ($ret) {
-//            return $this->statement->rowCount();
-//        } else {
-//            return null;
-//        }
-//    }
-//    
+    public Number update(Map<String, Object> data) {
+    	data = prepareData(data);
+    	List<String> list = new ArrayList<>(); // 设置字段
+    	Map<String, Object> params = new LinkedHashMap<>(); // 字段参数值
+    	int i = 0;
+    	for(Entry<String, Object> entry : data.entrySet()) {
+    		String key = entry.getKey();
+    		String qpKey = PARAM_PREFIX + i++;
+    		list.add(key + "=" + qpKey);
+    		params.put(qpKey, entry.getValue());
+    	}
+    	StringBuilder sb = new StringBuilder();
+    	sb.append("UPDATE ").append(tableName());
+    	sb.append(" SET ").append(DPUtil.implode(", ", DPUtil.collectionToArray(list)));
+    	if(null != where) sb.append(" WHERE ").append(where);
+    	sql = sb.toString();
+    	bindValues(params);
+    	Number result = executeUpdate(retry);
+    	close();
+    	return result;
+    }
+    
+    public Number delete() {
+    	StringBuilder sb = new StringBuilder();
+    	sb.append("DELETE FROM ").append(tableName());
+    	if(null != where) sb.append(" WHERE ").append(where);
+    	sql = sb.toString();
+    	Number result = executeUpdate(retry);
+    	close();
+    	return result;
+    }
+    
 //    /**
 //     * 执行一条 SQL 语句，insert|update|delete返回受影响的行数,select返回PDOStatement对象,失败的情况会返回 null
 //     * 不建议直接使用，需要自己处理参数安全转义
