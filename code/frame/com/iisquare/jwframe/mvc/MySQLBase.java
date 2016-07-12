@@ -1,6 +1,7 @@
 package com.iisquare.jwframe.mvc;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -11,6 +12,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.iisquare.jwframe.database.MySQLConnector;
 import com.iisquare.jwframe.database.MySQLConnectorManager;
+import com.iisquare.jwframe.utils.DPUtil;
 
 public abstract class MySQLBase extends DaoBase {
 	
@@ -24,8 +26,8 @@ public abstract class MySQLBase extends DaoBase {
 	private Integer limit;
 	private Integer offset;
 	private Object orderBy;
-	private Object select;
-	private Object selectOption;
+	private List<?> select;
+	private String selectOption;
 	private Object distinct;
 	private Object groupBy;
 	private Object join;
@@ -125,24 +127,25 @@ public abstract class MySQLBase extends DaoBase {
         return exception;
     }
     
-//    /**
-//     * 方法用来指定 SQL 语句当中的 SELECT 子句 默认为 *
-//     * $query->select(['id', 'email']); 等同于 $query->select('id, email');
-//     * $query->select(['user.id AS user_id', 'email']);  等同于  $query->select('user.id AS user_id, email');
-//     * 如果使用数组格式来指定字段，你可以使用数组的键值来表示字段的别名。 例如，上面的代码可以被重写为如下形式：
-//     * $query->select(['user_id' => 'user.id', 'email']);
-//     * 除了字段名称以外，你还可以选择数据库的表达式。当你使用到包含逗号的数据库表达式的时候， 你必须使用数组的格式，以避免自动的错误的引号添加。例如：
-//     * $query->select(["CONCAT(first_name, ' ', last_name) AS full_name", 'email']);
-//     * 你可以调用 addSelect() 方法来选取附加字段
-//     */
-//    public function select($columns, $option = null) {
-//        if (!is_array($columns)) {
-//            $columns = preg_split('/\s*,\s*/', trim($columns), -1, PREG_SPLIT_NO_EMPTY);
-//        }
-//        $this->select = $columns;
-//        $this->selectOption = $option;
-//        return $this;
-//    }
+	public void setSelectOption(String selectOption) {
+		this.selectOption = selectOption;
+	}
+
+	/**
+	 * 查询返回字段
+	 * @param columns String or List
+	 */
+    public MySQLBase select(Object columns) {
+    	List<?> list;
+    	if(columns instanceof List) {
+    		list = (List<?>) columns;
+    	} else {
+    		list = DPUtil.stringArrayToList(DPUtil.explode(DPUtil.parseString(columns), "\\s*,\\s*", " ", true));
+    	}
+        select = list;
+        return this;
+    }
+    
 //    
 //    /**
 //     * @see select()
