@@ -26,9 +26,9 @@ public abstract class MySQLBase extends DaoBase {
 	private Integer limit;
 	private Integer offset;
 	private Object orderBy;
-	private List<?> select;
+	private List<String> select;
 	private String selectOption;
-	private Object distinct;
+	private boolean distinct = false;
 	private Object groupBy;
 	private Object join;
 	private Object having;
@@ -127,18 +127,23 @@ public abstract class MySQLBase extends DaoBase {
         return exception;
     }
     
+    /**
+     * 设置额外的查询字段选项
+     * @param selectOption
+     */
 	public void setSelectOption(String selectOption) {
 		this.selectOption = selectOption;
 	}
 
 	/**
 	 * 查询返回字段
-	 * @param columns String or List
+	 * @param columns String or List<String>
 	 */
-    public MySQLBase select(Object columns) {
-    	List<?> list;
+    @SuppressWarnings("unchecked")
+	public MySQLBase select(Object columns) {
+    	List<String> list;
     	if(columns instanceof List) {
-    		list = (List<?>) columns;
+    		list = (List<String>) columns;
     	} else {
     		list = DPUtil.stringArrayToList(DPUtil.explode(DPUtil.parseString(columns), "\\s*,\\s*", " ", true));
     	}
@@ -146,30 +151,36 @@ public abstract class MySQLBase extends DaoBase {
         return this;
     }
     
-//    
-//    /**
-//     * @see select()
-//     */
-//    public function addSelect($columns) {
-//        if (!is_array($columns)) {
-//            $columns = preg_split('/\s*,\s*/', trim($columns), -1, PREG_SPLIT_NO_EMPTY);
-//        }
-//        if ($this->select === null) {
-//            $this->select = $columns;
-//        } else {
-//            $this->select = array_merge($this->select, $columns);
-//        }
-//        return $this;
-//    }
-//    
-//    /**
-//     * 去除重复行
-//     */
-//    public function distinct($value = true) {
-//        $this->distinct = $value;
-//        return $this;
-//    }
-//    
+    
+    /**
+     * @see select()
+     */
+    @SuppressWarnings("unchecked")
+	public MySQLBase addSelect(Object columns) {
+    	List<String> list;
+    	if(columns instanceof List) {
+    		list = (List<String>) columns;
+    	} else {
+    		list = DPUtil.stringArrayToList(DPUtil.explode(DPUtil.parseString(columns), "\\s*,\\s*", " ", true));
+    	}
+        if (null == select) {
+        	select = list;
+        } else {
+        	for (String item : list) {
+        		select.add(item);
+        	}
+        }
+        return this;
+    }
+    
+    /**
+     * 去除重复行
+     */
+    public MySQLBase distinct(boolean value) {
+        distinct = value;
+        return this;
+    }
+    
 //    /**
 //     * 方法定义了 SQL 语句当中的 WHERE 子句。 你可以使用如下三种格式来定义 WHERE 条件：
 //     *
