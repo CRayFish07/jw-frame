@@ -1,5 +1,8 @@
 package com.iisquare.jwframe.service;
 
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
@@ -14,16 +17,14 @@ public class DemoService extends ServiceBase {
 	@Autowired
 	public DemoDao demoDao;
 	
-	/*public function insert($data) {
-        return $this->demoDao->insert($data);
+	public Integer insert(Map<String, Object> data) {
+		Number id = demoDao.insert(data);
+		if(null == id) return null;
+        return id.intValue();
     }
     
-    public function getList() {
-        return $this->demoDao->where(['status' => 1])->orderBy('id desc')->limit(30)->all();
-    }*/
-	
-	public void getList() {
-		System.out.println(demoDao.tableName());
+	public List<Map<String, Object>> getList() {
+		return demoDao.where("status=1").orderBy("id desc").limit(30).all();
 	}
 	
 	public String getMessage() {

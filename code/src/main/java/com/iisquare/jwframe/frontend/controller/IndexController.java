@@ -1,5 +1,9 @@
 package com.iisquare.jwframe.frontend.controller;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.lang.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -27,8 +31,17 @@ public class IndexController extends CoreController {
 		return displayMessage(0, "news working!", assign);
 	}
 	
+	public Object modifyAction() throws Exception {
+		Map<String, Object> data = new LinkedHashMap<>();
+		data.put("name", "Node" + DPUtil.getCurrentSeconds());
+		data.put("status", 1);
+		Integer id = demoService.insert(data);
+        if(null == id) return displayMessage(500, null, null);
+		return displayMessage(0, null, id);
+	}
+	
 	public Object listAction() throws Exception {
-		demoService.getList();
-		return displayMessage(0, null, null);
+		List<Map<String, Object>> data = demoService.getList();
+		return displayMessage(0, null, data);
 	}
 }
