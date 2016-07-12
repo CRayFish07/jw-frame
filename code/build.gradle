@@ -18,10 +18,10 @@ repositories {
     mavenCentral()
 }
 // 依赖
-def springVersion = '4.2.6.RELEASE'
+def springVersion = '4.2.7.RELEASE'
 dependencies {
     providedRuntime ( // 不会打包进war
-        
+        [group: 'org.springframework', name: 'spring-jdbc', version: springVersion]
     )
     compile (
         // J2EE

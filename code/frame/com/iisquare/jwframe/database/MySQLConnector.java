@@ -28,12 +28,21 @@ public class MySQLConnector extends Connector {
     private int slavePort;
     private Connection masterResource;
     private Connection slaveResource;
+    private int timeout = 250; // 获取连接超时时间
     private int transactionLevel = 0;
     private String masterUrl, slaveUrl;
     private ConnectionManager connectionManager;
     private Logger logger = Logger.getLogger(getClass().getName());
     
-    /**
+    public int getTimeout() {
+		return timeout;
+	}
+
+	public void setTimeout(int timeout) {
+		this.timeout = timeout;
+	}
+
+	/**
      * 获取数据库表前缀
      */
 	public String getTablePrefix() {
@@ -90,7 +99,7 @@ public class MySQLConnector extends Connector {
     	String dbUrl = isMaster ? masterUrl : slaveUrl;
         if(!connectionManager.addPool(this, dbUrl)) return null;
         try {
-			return connectionManager.getConnection(dbUrl, 300);
+			return connectionManager.getConnection(dbUrl, timeout);
 		} catch (SQLException e) {
 			logger.error(e.getMessage());
 			return null;

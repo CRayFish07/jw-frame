@@ -1,7 +1,10 @@
 package com.iisquare.jwframe.mvc;
 
+import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,21 +28,21 @@ public abstract class MySQLBase extends DaoBase {
 	private WebApplicationContext webApplicationContext;
 	private MySQLConnectorManager connectorManager;
 	private MySQLConnector connector;
-	private int timeout = 250; // 获取连接超时时间
-	private Object resource; // 当前连接资源
+	private int retry = 1; // 失败重试次数
+	private Connection resource; // 当前连接资源
 	private PreparedStatement statement; // 当前预处理对象
 	private boolean isMaster = false;
 	private String select = "*";
 	private String where;
-	private Map<String, Object> pendingParams;
 	private String groupBy;
 	private String having;
 	private String orderBy;
 	private Integer limit;
 	private Integer offset;
+	private List<String[]> join;
 	private String sql;
 	private Exception exception;
-	private List<String[]> join;
+	private Map<String, Object> pendingParams = new LinkedHashMap<>();
 	
 	public MySQLBase() {}
 	
@@ -84,7 +87,14 @@ public abstract class MySQLBase extends DaoBase {
 	 * 设置连接超时时间，0为无限等待
 	 */
 	public void setTimeout(int timeout) {
-		this.timeout = timeout;
+		connector.setTimeout(timeout);
+	}
+
+	/**
+	 * 设置失败重试次数
+	 */
+	public void setRetry(int retry) {
+		this.retry = retry;
 	}
 
 	/**
@@ -139,14 +149,12 @@ public abstract class MySQLBase extends DaoBase {
     }
     
     public MySQLBase bindValue(String name, Object value) {
-    	if(null == pendingParams) pendingParams = new LinkedHashMap<>();
     	pendingParams.put(name, value);
         return this;
     }
 	
 	public MySQLBase bindValues(Map<String, Object> values) {
 		if(null == values) return this;
-		if(null == pendingParams) pendingParams = new LinkedHashMap<>();
 		for (Entry<String, Object> entry : values.entrySet()) {
 			pendingParams.put(entry.getKey(), entry.getValue());
 		}
@@ -229,6 +237,29 @@ public abstract class MySQLBase extends DaoBase {
         return this;
     }
     
+    private String build() {
+    	StringBuilder sb = new StringBuilder();
+    	sb.append("SELECT ").append(null == select ? "*" : select);
+    	sb.append(" FROM ").append(tableName());
+    	if(null != join) { // JOIN
+    		for (String[] item : join) {
+    			sb.append(" ").append(item[0]).append(" ").append(item[1]);
+    			if(null == item[2]) continue;
+    			sb.append(" ON ").append(item[2]);
+    		}
+    	}
+    	if(null != where) sb.append(" WHERE ").append(where);
+    	if(null != groupBy) sb.append(" GROUP BY ").append(groupBy);
+    	if(null != having) sb.append(" HAVING ").append(having);
+    	if(null != orderBy) sb.append(" ORDER BY ").append(orderBy);
+    	if(null != offset && null != limit) {
+    		sb.append(" LIMIT ");
+    		if(null != offset) sb.append(offset).append(", ");
+    		sb.append(null == limit ? 0 : limit);
+    	}
+    	return sb.toString();
+    }
+    
     public MySQLBase bindParam(int index, Object param) throws SQLException {
         if (null == statement) {
             throw new SQLException("bindParam must exist statement.call method insert update delete query..");
@@ -253,99 +284,136 @@ public abstract class MySQLBase extends DaoBase {
         return this;
     }
     
-    private String build() {
-    	StringBuilder sb = new StringBuilder();
-    	sb.append("SELECT ").append(null == select ? "*" : select);
-    	sb.append(" FROM ").append(tableName());
-    	if(null != join) { // JOIN
-    		for (String[] item : join) {
-    			sb.append(" ").append(item[0]).append(" ").append(item[1]);
-    			if(null == item[2]) continue;
-    			sb.append(" ON ").append(item[2]);
-    		}
+    private void bindPendingParams() {
+    	for (Entry<String, Object> entry : pendingParams.entrySet()) {
+    		// TODO find param index 
     	}
-    	if(null != where) sb.append(" WHERE ").append(where);
-    	if(null != groupBy) sb.append(" GROUP BY ").append(groupBy);
-    	if(null != having) sb.append(" HAVING ").append(having);
-    	if(null != orderBy) sb.append(" ORDER BY ").append(orderBy);
-    	if(null != offset && null != limit) {
-    		sb.append(" LIMIT ");
-    		if(null != offset) sb.append(offset).append(", ");
-    		sb.append(null == limit ? 0 : limit);
-    	}
-    	return sb.toString();
+    	pendingParams = new LinkedHashMap<>();
+    }
+    
+    private boolean execute(boolean forRead, int retry) {
+        if(null == sql || "".equals(sql)) return false;
+        try {
+        	if(null != statement) {
+            	statement.close();
+            	statement = null;
+            }
+            if(isMaster || connector.isTransaction()) forRead = false;
+            resource = forRead ? connector.getSlave() : connector.getMaster();
+			statement = resource.prepareStatement(sql);
+			bindPendingParams();
+	        return statement.execute();
+		} catch (SQLException e) {
+			exception = e;
+			if(retry > 0 && 2006 == e.getErrorCode()) {
+				connector.close();
+				return execute(forRead, --retry);
+			}
+			return false;
+		}
     }
     
     /**
-     * 返回查询的数据资源对象，使用fetch()方法遍历数据，如果取出数据后要循环处理，建议使用该方法
+     * 返回查询的数据资源对象，使用getResultSet()方法遍历数据，如果取出数据后要循环处理，建议使用该方法
     */
 	public PreparedStatement query() {
 	    sql = build();
-//	    if (execute(true, self::$retry)) {
-//	        return $this->statement;
-//	    }
+	    if(execute(true, retry)) {
+	    	return statement;
+	    }
 	    return null;
 	}
+	
+	/**
+	 * 读取ResultSet到List<Map<String, Object>>
+	 */
+	private List<Map<String, Object>> fetchResultSet(ResultSet rs) throws Exception {
+		ResultSetMetaData rsmd = rs.getMetaData();
+		List<Map<String, Object>> tempList = new ArrayList<>();
+		Map<String, Object> tempHash = null;
+		while (rs.next()) {
+			tempHash = new LinkedHashMap<String, Object>();
+			for (int i = 0; i < rsmd.getColumnCount(); i++) {
+				tempHash.put(rsmd.getColumnName(i + 1), rs.getString(rsmd.getColumnName(i + 1)));
+			}
+			tempList.add(tempHash);
+		}
+		return tempList;
+	}
+	
+    /**
+     * 返回查询的所有数据数组
+     */
+    public List<Map<String, Object>> all() {
+        sql = build();
+        if (!execute(true, retry)) return null;
+		try {
+			return fetchResultSet(statement.getResultSet());
+		} catch (Exception e) {
+			return null;
+		} finally {
+			try {
+				statement.close();
+				statement = null;
+			} catch (SQLException e) {}
+		}
+    }
+	
+    public Map<String, Object> one() {
+    	Integer offset = this.offset;
+    	Integer limit = this.offset;
+    	this.offset = null;
+    	this.limit = 1;
+    	sql = build();
+    	List<Map<String, Object>> list = all();
+    	this.offset = offset;
+    	this.limit = limit;
+    	if(null == list) return null;
+    	if(list.isEmpty()) return new LinkedHashMap<>();
+    	return list.get(0);
+    }
  
-//    /**
-//     * 返回 select count($q) 数量
-//     */
-//    public function count($q = '*') {
-//        return $this->one("COUNT($q)");
-//    }
-//    
-//    /**
-//     * 返回 select sum($q) 总数
-//     */
-//    public function sum($q) {
-//        return $this->one("SUM($q)");
-//    }
-//    
-//    /**
-//     * 返回 select avg($q) 均值
-//     */
-//    public function average($q) {
-//        return $this->one("AVG($q)");
-//    }
-//    
-//    /**
-//     * 返回 select min($q) 最小值
-//     */
-//    public function min($q) {
-//        return $this->one("MIN($q)");
-//    }
-//    
-//    /**
-//     * 返回 select max($q) 最大值
-//     */
-//    public function max($q) {
-//        return $this->one("MAX($q)");
-//    }
-//    
-//    /**
-//     * 返回查询的条件是否存在
-//     */
-//    public function exists() {
-//        return $this->count() > 0;
-//    }
-//    
+    public Number calculate(String type, String field) {
+    	String fields = select;
+    	select = type + "(" + field + ") as calculate";
+    	Map<String, Object> map = one();
+    	select = fields;
+    	if(null == map) return null;
+    	return (Number) map.get("calculate");
+    }
+    
+    public Number count() {
+    	return count("*");
+    }
+    
+    public Number count(String field) {
+    	return calculate("COUNT", field);
+    }
+    
+    public Number sum(String field) {
+    	return calculate("SUM", field);
+    }
+    
+    public Number average(String field) {
+    	return calculate("AVG", field);
+    }
+    
+    public Number min(String field) {
+    	return calculate("MIN", field);
+    }
+    
+    public Number max(String field) {
+    	return calculate("MAX", field);
+    }
+    
+    /**
+     * 返回查询的条件是否存在
+     */
+    public boolean exists() {
+        return count().intValue() > 0;
+    }
+    
 
-//    
-//    /**
-//     * 返回查询的所有数据数组
-//     */
-//    public function all($fetchMode = null) {
-//        $this->sql = $this->build();
-//        if ($this->execute(true, self::$retry)) {
-//            if ($fetchMode === null) {
-//                $fetchMode = PDO::FETCH_ASSOC;
-//            }
-//            $return = $this->statement->fetchAll($fetchMode);
-//            $this->statement->closeCursor();
-//            return $return;
-//        }
-//        return null;
-//    }
 //    
 //    /**
 //     * 返回多行单值
@@ -354,36 +422,7 @@ public abstract class MySQLBase extends DaoBase {
 //        return $this->all(PDO::FETCH_COLUMN);
 //    }
 //    
-//    /**
-//     * 查询标量值/计算值
-//     * @param string $field 可选参数 数据表中字段，如果设值，将返回该字段标量，否则按select()方法设值的字段返回一行
-//     */
-//    public function one($field = '') {
-//        if (!empty($field)) {
-//            $select = $this->select;
-//            $this->select = [$field];
-//        }
-//        $limit = $this->limit;
-//        $offset = $this->offset;
-//        $this->limit = 1;
-//        $this->offset = null;
-//        $this->sql = $this->build();
-//        $return = null;
-//        if ($this->execute(true, self::$retry)) {
-//            if (!empty($field)) {
-//                $return = $this->statement->fetchColumn(0);
-//            } else {
-//                $return = $this->statement->fetch(PDO::FETCH_ASSOC);
-//            }
-//            $this->statement->closeCursor();
-//        }
-//        $this->limit = $limit;
-//        $this->offset = $offset;
-//        if (!empty($field)) {
-//            $this->select = $select;
-//        }
-//        return $return;
-//    }
+
 //    
 //    /**
 //     * 单条插入
@@ -585,77 +624,8 @@ public abstract class MySQLBase extends DaoBase {
 //    protected function createTable() {
 //        return false;
 //    }
-//    
-//    private function execute($forRead, $curreconn = 0) {
-//        if (!isset($this->sql) || empty($this->sql)) {
-//            return null;
-//        }
-//        try {
-//            if (!$this->statement || $this->statement->queryString != $this->sql) {
-//                if ($this->statement) {
-//                    $this->statement->closeCursor();
-//                    $this->statement = null;
-//                }
-//                if ($this->isMaster || $this->connection->isTransaction()) {
-//                    $forRead = false;
-//                }
-//                if ($forRead) {
-//                    $this->resource = $this->connection->getSlave();
-//                } else {
-//                    $this->resource = $this->connection->getMaster();
-//                }
-//                if ($this->logger->isDebugEnabled()) {
-//                    $this->logger->debug("Debug: sql = {$this->sql}");
-//                    $startTime = microtime(true);
-//                }
-//                $this->statement = $this->resource->prepare($this->sql);
-//                if ($this->logger->isDebugEnabled()) {
-//                    $bindTime = microtime(true) - $startTime;
-//                    $this->logger->debug('<font color="' . ($bindTime > 1 ? 'red' : 'green') . '">prepareTime: ' . $bindTime . "</font>");
-//                }
-//            }
-//            $this->bindPendingParams();
-//            if ($this->logger->isDebugEnabled()) {
-//                $startTime = microtime(true);
-//            }
-//            $result = $this->statement->execute();
-//            if ($this->logger->isDebugEnabled()) {
-//                $cxcuteTime = microtime(true) - $startTime;
-//                $this->logger->debug('<font color="' . ($cxcuteTime > 1 ? 'red' : 'green') . '">ExcuteTime: ' . $cxcuteTime . "</font>");
-//            }
-//            return $result;
-//        } catch (PDOException $e) {
-//            if ($this->logger->isDebugEnabled()) {
-//                $this->logger->debug('<b style="color:red;">'.$e->getMessage()."</b>");
-//            }
-//            $this->errorCode = $e->getCode();
-//            $this->errorMsg = $e->getMessage();
-//            if ($this->connection->isTransaction()) {
-//                throw $e;
-//            }
-//            if ($curreconn > 0 && $e->errorInfo[1] == 2006) {
-//                if ($this->logger->isDebugEnabled()) {
-//                    $this->logger->debug('<font color=red>reconn:' . $curreconn . '</font>');
-//                }
-//                $curreconn--;
-//                $this->connection->close();
-//                return $this->execute($forRead, $curreconn);
-//            }
-//            return null;
-//        }
-//    }
-//    
-//    private function bindPendingParams() {
-//        if ($this->logger->isTraceEnabled()) {
-//            foreach ($this->_pendingParams as $k => $v) {
-//                $this->logger->trace($k.'=>'.$v[0]);
-//            }
-//        }
-//        foreach ($this->_pendingParams as $name => $value) {
-//            $this->statement->bindValue($name, $value[0], $value[1]);
-//        }
-//        $this->_pendingParams = [];
-//    }
+
+
 //    
 
 
