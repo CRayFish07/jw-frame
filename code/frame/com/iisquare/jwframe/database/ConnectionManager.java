@@ -109,11 +109,11 @@ public class ConnectionManager {
 			Integer maxConnections = connector.getMaxConnections();
 			Integer timeEventInterval = connector.getTimeEventInterval();
 			if(null != isCheckValid) pool.setCheckValid(isCheckValid);
-			pool.setIncrementalConnections(incrementalConnections);
-			pool.setDecrementalConnections(decrementalConnections);
-			pool.setInitialConnections(initialConnections);
-			pool.setMaxConnections(maxConnections);
-			pool.setTimeEventInterval(timeEventInterval);
+			if(null != incrementalConnections) pool.setIncrementalConnections(incrementalConnections);
+			if(null != decrementalConnections) pool.setDecrementalConnections(decrementalConnections);
+			if(null != initialConnections) pool.setInitialConnections(initialConnections);
+			if(null != maxConnections) pool.setMaxConnections(maxConnections);
+			if(null != timeEventInterval) pool.setTimeEventInterval(timeEventInterval);
 			pools.put(dbUrl, pool);
 		}
 		return true;
