@@ -11,8 +11,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+
 import javax.annotation.PostConstruct;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -325,6 +328,24 @@ public abstract class MySQLBase extends DaoBase {
 		}
     }
     
+    private Number executeUpdate(int retry) {
+        if(null == sql || "".equals(sql)) return null;
+        try {
+        	close();
+            resource = connector.getMaster();
+			statement = resource.prepareStatement(sql);
+			bindPendingParams();
+	        return statement.executeUpdate();
+		} catch (SQLException e) {
+			exception = e;
+			if(retry > 0 && 2006 == e.getErrorCode()) {
+				connector.close();
+				return executeUpdate(--retry);
+			}
+			return null;
+		}
+    }
+    
     /**
      * 返回查询的数据资源对象，使用getResultSet()方法遍历数据，如果取出数据后要循环处理，建议使用该方法
     */
@@ -449,11 +470,11 @@ public abstract class MySQLBase extends DaoBase {
     	}
     	StringBuilder sb = new StringBuilder();
     	sb.append("INSERT INTO ").append(tableName());
-    	sb.append(" (").append(DPUtil.implode(",", DPUtil.collectionToStringArray(data.keySet()))).append(")");
-    	sb.append(" VALUES (").append(DPUtil.implode(",", DPUtil.collectionToArray(params.keySet()))).append(")");
+    	sb.append(" (").append(DPUtil.implode(", ", DPUtil.collectionToStringArray(data.keySet()))).append(")");
+    	sb.append(" VALUES (").append(DPUtil.implode(", ", DPUtil.collectionToArray(params.keySet()))).append(")");
     	if(needUpdate) sb.append(""); // TODO duplicateUpdate
     	bindValues(params);
-    	if(execute(false, retry)) {
+    	if(null != executeUpdate(retry)) {
     		Number lastId = lastInsertId(statement);
     		close();
     		return lastId;
@@ -476,50 +497,45 @@ public abstract class MySQLBase extends DaoBase {
     	}
     }
     
-//    /**
-//     * 批量插入
-//     * @param array $datas 插入的数据是以表字段名为下标的二维数组，如：[['name' => 'Sam1','age' => 30],['name' => 'Sam1','age' => 40]]
-//     * @param boolean $needUpdate
-//     */
-//    public function batchInsert($datas, $needUpdate = false) {
-//        if (!is_array($datas) || !is_array(current($datas))) {
-//            return null;
-//        }
-//        $values = [];
-//        $columns = null;
-//        foreach ($datas as $row) {
-//            $this->prepareData($row);
-//            $vs = [];
-//            !isset($columns) && $columns = array_keys($row);
-//            foreach ($row as $i => $value) {
-//                if (is_string($value)) {
-//                    $value = $this->quoteValue($value);
-//                } elseif ($value === false) {
-//                    $value = 0;
-//                } elseif ($value === null) {
-//                    $value = "''";
-//                }
-//                $vs[] = $value;
-//            }
-//            $values[] = '(' . implode(', ', $vs) . ')';
-//        }
-//        foreach ($columns as $i => $name) {
-//            $columns[$i] = $this->quoteColumnName($name);
-//        }
-//        $this->sql = 'INSERT INTO ' . $this->tableName() . ' (' . implode(', ', $columns) . ') VALUES ' . implode(', ', $values);
-//        if ($needUpdate) {
-//            $this->sql .= $this->duplicateUpdate($columns);
-//        }
-//        $ret = $this->execute(false, self::$retry);
-//        if ($ret) {
-//            return $this->statement->rowCount();
-//        } else if ($this->errorCode == '42S02' && $this->createTable()) {
-//            return $this->batchInsert($datas, $needUpdate);
-//        } else {
-//            return null;
-//        }
-//    }
-//    
+    /**
+     * 批量插入
+     */
+    public Number batchInsert(List<Map<String, Object>> datas) {
+    	boolean needUpdate = transientNeedUpdate;
+    	transientNeedUpdate = false;
+    	Set<String> keys = null;
+    	List<String> values = new ArrayList<>();
+    	for (Map<String, Object> data : datas) {
+    		data = prepareData(data);
+    		if(null == keys) keys = data.keySet();
+    		List<Object> list = new ArrayList<>();
+    		for (String key : keys) {
+    			Object value = data.get(key);
+    			if(null == value) {
+    				value = "''";
+    			} else if (value instanceof String) {
+    				value = "'" + StringEscapeUtils.escapeSql(value.toString()) + "'";
+    			}
+    			list.add(value);
+    		}
+    		values.add("(" + DPUtil.implode(", ", DPUtil.collectionToArray(list)) + ")");
+    	}
+    	StringBuilder sb = new StringBuilder();
+    	sb.append("INSERT INTO ").append(tableName());
+    	sb.append(" (").append(DPUtil.implode(", ", DPUtil.collectionToStringArray(keys))).append(")");
+    	sb.append(" VALUES ").append(DPUtil.implode(", ", DPUtil.collectionToArray(values)));
+    	if(needUpdate) sb.append(""); // TODO duplicateUpdate
+    	if(null != executeUpdate(retry)) {
+    		Number lastId = lastInsertId(statement);
+    		close();
+    		return lastId;
+    	} else if(null != exception && "42S02".equals(exception.getErrorCode()) && createTable()) { // TODO 42S02
+    		transientNeedUpdate = needUpdate;
+    		return batchInsert(datas);
+    	}
+    	return null;
+    }
+    
 //    /**
 //     * 更新并返回更新的行数
 //     * @param arrya $data 数组数据 ['name' => 'Sam1','age' => 30]
