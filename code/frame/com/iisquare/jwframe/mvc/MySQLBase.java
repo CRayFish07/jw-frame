@@ -312,9 +312,11 @@ public abstract class MySQLBase extends DaoBase {
         return this;
     }
     
-    private void bindPendingParams() {
-    	for (Entry<String, Object> entry : pendingParams.entrySet()) {
-    		// TODO find param index 
+    private void bindPendingParams() throws SQLException {
+    	List<String> list = DPUtil.getMatcher(":[a-zA-Z0-9_]+", sql, false);
+    	int size = list.size();
+    	for (int index = 0; index < size; index++) {
+    		bindParam(index, pendingParams.get(list.get(index)));
     	}
     	pendingParams = new LinkedHashMap<>();
     }
