@@ -111,9 +111,9 @@ public class MySQLConnector extends Connector {
     		connectionManager.returnConnection(masterUrl, masterResource);
     		masterResource = null;
     	}
-    	if(null != slaveUrl) {
+    	if(null != slaveResource) {
     		connectionManager.returnConnection(slaveUrl, slaveResource);
-    		slaveUrl = null;
+    		slaveResource = null;
     	}
     }
 
