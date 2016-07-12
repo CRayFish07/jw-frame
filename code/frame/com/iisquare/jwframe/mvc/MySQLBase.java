@@ -280,7 +280,7 @@ public abstract class MySQLBase extends DaoBase {
     	if(null != groupBy) sb.append(" GROUP BY ").append(groupBy);
     	if(null != having) sb.append(" HAVING ").append(having);
     	if(null != orderBy) sb.append(" ORDER BY ").append(orderBy);
-    	if(null != offset && null != limit) {
+    	if(null != offset || null != limit) {
     		sb.append(" LIMIT ");
     		if(null != offset) sb.append(offset).append(", ");
     		sb.append(null == limit ? 0 : limit);
