@@ -6,7 +6,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +36,7 @@ public abstract class MySQLBase extends DaoBase {
 	private Connection resource; // 当前连接资源
 	private PreparedStatement statement; // 当前预处理对象
 	private boolean isMaster = false;
-	private String select = "*";
+	private String select;
 	private String where;
 	private String groupBy;
 	private String having;
@@ -179,6 +181,14 @@ public abstract class MySQLBase extends DaoBase {
 		return this;
 	}
     
+	/**
+     * 清除已绑定的查询参数数组
+     */
+    public MySQLBase cancelBindValues() {
+    	pendingParams = new LinkedHashMap<>();
+        return this;
+    }
+	
 	public MySQLBase select(String columns) {
         select = columns;
         return this;
@@ -309,8 +319,9 @@ public abstract class MySQLBase extends DaoBase {
     	pendingParams = new LinkedHashMap<>();
     }
     
-    private boolean execute(boolean forRead, int retry) {
+    private boolean execute(int retry) {
         if(null == sql || "".equals(sql)) return false;
+        boolean forRead = true;
         try {
         	close();
             if(isMaster || connector.isTransaction()) forRead = false;
@@ -322,9 +333,28 @@ public abstract class MySQLBase extends DaoBase {
 			exception = e;
 			if(retry > 0 && 2006 == e.getErrorCode()) {
 				connector.close();
-				return execute(forRead, --retry);
+				return execute(--retry);
 			}
 			return false;
+		}
+    }
+
+    /**
+     * 执行一条查询语句，返回PreparedStatement对象
+     * 不建议直接使用，需要自己处理参数安全转义
+     */
+    public Statement execute(String sql) {
+        boolean forRead = true;
+        try {
+        	close();
+            if(isMaster || connector.isTransaction()) forRead = false;
+            resource = forRead ? connector.getSlave() : connector.getMaster();
+            statement = resource.prepareStatement(sql);
+			if (statement.execute()) return statement;
+			return null;
+		} catch (SQLException e) {
+			exception = e;
+			return null;
 		}
     }
     
@@ -347,11 +377,28 @@ public abstract class MySQLBase extends DaoBase {
     }
     
     /**
+     * 执行一条更新语句，返回受影响行数
+     * 不建议直接使用，需要自己处理参数安全转义
+     */
+    public Number executeUpdate(String sql) {
+        if(null == sql || "".equals(sql)) return null;
+        try {
+        	close();
+            resource = connector.getMaster();
+			statement = resource.prepareStatement(sql);
+	        return statement.executeUpdate();
+		} catch (SQLException e) {
+			exception = e;
+			return null;
+		}
+    }
+    
+    /**
      * 返回查询的数据资源对象，使用getResultSet()方法遍历数据，如果取出数据后要循环处理，建议使用该方法
     */
 	public PreparedStatement query() {
 	    sql = build();
-	    if(execute(true, retry)) {
+	    if(execute(retry)) {
 	    	return statement;
 	    }
 	    return null;
@@ -379,7 +426,7 @@ public abstract class MySQLBase extends DaoBase {
      */
     public List<Map<String, Object>> all() {
         sql = build();
-        if (!execute(true, retry)) return null;
+        if (!execute(retry)) return null;
 		try {
 			return fetchResultSet(statement.getResultSet());
 		} catch (Exception e) {
@@ -455,6 +502,14 @@ public abstract class MySQLBase extends DaoBase {
 		}
     }
     
+    private String duplicateUpdate(Collection<String> fields) {
+        List<String> list = new ArrayList<>();
+        for (String field : fields) {
+        	list.add(field + " = VALUES(" + field + ")");
+        }
+        return " ON DUPLICATE KEY UPDATE " + DPUtil.implode(", ", DPUtil.collectionToStringArray(list));
+    }
+    
     /**
      * 单条插入
      */
@@ -472,7 +527,7 @@ public abstract class MySQLBase extends DaoBase {
     	sb.append("INSERT INTO ").append(tableName());
     	sb.append(" (").append(DPUtil.implode(", ", DPUtil.collectionToStringArray(data.keySet()))).append(")");
     	sb.append(" VALUES (").append(DPUtil.implode(", ", DPUtil.collectionToArray(params.keySet()))).append(")");
-    	if(needUpdate) sb.append(""); // TODO duplicateUpdate
+    	if(needUpdate) sb.append(duplicateUpdate(data.keySet()));
     	sql = sb.toString();
     	bindValues(params);
     	if(null != executeUpdate(retry)) {
@@ -484,18 +539,6 @@ public abstract class MySQLBase extends DaoBase {
     		return insert(data);
     	}
     	return null;
-    }
-    
-    private void close() {
-    	if(null != statement) {
-    		try {
-				statement.close();
-			} catch (SQLException e) {
-				
-			} finally {
-				statement = null;
-			}
-    	}
     }
     
     /**
@@ -525,7 +568,7 @@ public abstract class MySQLBase extends DaoBase {
     	sb.append("INSERT INTO ").append(tableName());
     	sb.append(" (").append(DPUtil.implode(", ", DPUtil.collectionToStringArray(keys))).append(")");
     	sb.append(" VALUES ").append(DPUtil.implode(", ", DPUtil.collectionToArray(values)));
-    	if(needUpdate) sb.append(""); // TODO duplicateUpdate
+    	if(needUpdate) sb.append(duplicateUpdate(keys));
     	sql = sb.toString();
     	if(null != executeUpdate(retry)) {
     		Number lastId = lastInsertId(statement);
@@ -570,144 +613,46 @@ public abstract class MySQLBase extends DaoBase {
     	return result;
     }
     
-//    /**
-//     * 执行一条 SQL 语句，insert|update|delete返回受影响的行数,select返回PDOStatement对象,失败的情况会返回 null
-//     * 不建议直接使用，需要自己处理参数安全转义
-//     */
-//    public function execSql($sql) {
-//        try {
-//            $forRead = $this->isReadQuery($sql);
-//            if (!$this->isMaster && $forRead) {
-//                $resource = $this->connection->getSlave();
-//            } else {
-//                $resource = $this->connection->getMaster();
-//            }
-//            if ($this->logger->isDebugEnabled()) {
-//                $startTime = microtime(true);
-//                $this->logger->debug("MySQL: sql = {$sql}");
-//            }
-//            $result = $forRead ? ($resource->query($sql)) : ($resource->exec($sql));
-//            if ($this->logger->isDebugEnabled()) {
-//                $cxcuteTime = microtime(true) - $startTime;
-//                $this->logger->debug('<font color=' . ($cxcuteTime > 1 ? 'red' : 'green') . '>ExcuteTime: ' . $cxcuteTime . "</font>");
-//            }
-//            return $result;
-//        } catch (PDOException $e) {
-//            if ($this->logger->isDebugEnabled()) {
-//                $this->logger->debug('<b style="color:red;">'.$e->getMessage()."</b>");
-//            }
-//            $this->errorCode = $e->getCode();
-//            $this->errorMsg = $e->getMessage();
-//            if ($this->connection->isTransaction()) {
-//                throw $e;
-//            }
-//            return null;
-//        }
-//    }
-//    
-//    /**
-//     * 清除 select() where() limit() offset() orderBy() groupBy() join() having()
-//     */
-//    public function reset() {
-//        $this->statement = null;
-//        $this->_pendingParams = [];
-//        $this->select = null;
-//        $this->where = null;
-//        $this->limit = null;
-//        $this->offset = null;
-//        $this->orderBy = null;
-//        $this->groupBy = null;
-//        $this->join = null;
-//        $this->having = null;
-//        return $this;
-//    }
-//    
-//    /**
-//     * 清除已绑定的查询参数数组
-//     */
-//    public function cancelBindValues() {
-//        $this->_pendingParams = [];
-//        return $this;
-//    }
-//    
-//    public function beginTransaction() {
-//        $this->connection->beginTransaction();
-//    }
-//    
-//    public function commit() {
-//        $this->connection->commit();
-//    }
-//    
-//    public function rollback() {
-//        $this->connection->rollback();
-//    }
-//    
+    private void close() {
+    	if(null != statement) {
+    		try {
+				statement.close();
+			} catch (SQLException e) {
+				
+			} finally {
+				statement = null;
+			}
+    	}
+    }
     
+    /**
+     * 清除 select() where() limit() offset() orderBy() groupBy() join() having()
+     */
+    public MySQLBase reset() {
+        close();
+        select = null;
+    	where = null;
+    	groupBy = null;
+    	having = null;
+    	orderBy = null;
+    	limit = null;
+    	offset = null;
+    	join = null;
+    	pendingParams = new LinkedHashMap<>();
+    	transientNeedUpdate = false;
+        return this;
+    }
+    
+    public boolean beginTransaction() {
+    	return connector.beginTransaction();
+    }
+    
+    public boolean commit() {
+    	return connector.commit();
+    }
+    
+    public boolean rollback() {
+    	return connector.rollback();
+    }
 
-
-//    
-
-
-//    private function duplicateUpdate($fields) {
-//        $sql = " ON DUPLICATE KEY UPDATE ";
-//        foreach ($fields as $field) {
-//            $sql .= $field . ' = VALUES(' . $field . '),';
-//        }
-//        return substr($sql, 0, -1);
-//    }
-//    
-//    private function quoteTableName($name) {
-//        if (strpos($name, '(') !== false || strpos($name, '{{') !== false) {
-//            return $name;
-//        }
-//        if (strpos($name, '.') === false) {
-//            return $this->quoteSimpleTableName($name);
-//        }
-//        $parts = explode('.', $name);
-//        foreach ($parts as $i => $part) {
-//            $parts[$i] = $this->quoteSimpleTableName($part);
-//        }
-//        return implode('.', $parts);
-//    }
-//    
-//    private function quoteSimpleTableName($name) {
-//        return strpos($name, '`') !== false ? $name : "`$name`";
-//    }
-//    
-//    private function quoteSimpleColumnName($name) {
-//        return strpos($name, '`') !== false || $name === '*' ? $name : "`$name`";
-//    }
-//    
-//    private function quoteValue($str) {
-//        if (!is_string($str)) {
-//            return $str;
-//        }
-//        if (!$this->resource) {
-//            $this->resource = $this->connection->getSlave();
-//        }
-//        if (($value = $this->resource->quote($str)) !== false) {
-//            return $value;
-//        } else {
-//            // the driver doesn't support quote (e.g. oci)
-//            return "'" . addcslashes(str_replace("'", "''", $str), "\000\n\r\\\032") . "'";
-//        }
-//    }
-
-//    private function isReadQuery($sql) {
-//        $pattern = '/^\s*(SELECT|SHOW|DESCRIBE)\b/i';
-//        return preg_match($pattern, $sql) > 0;
-//    }
-//    
-//    private function getPdoType($data) {
-//        static $typeMap = [
-//            // php type => PDO type
-//            'boolean' => PDO::PARAM_BOOL,
-//            'integer' => PDO::PARAM_INT,
-//            'string' => PDO::PARAM_STR,
-//            'resource' => PDO::PARAM_LOB,
-//            'NULL' => PDO::PARAM_NULL,
-//        ];
-//        $type = gettype($data);
-//        return isset($typeMap[$type]) ? $typeMap[$type] : PDO::PARAM_STR;
-//    }
 }
