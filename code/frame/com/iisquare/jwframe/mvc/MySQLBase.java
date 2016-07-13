@@ -298,51 +298,49 @@ public abstract class MySQLBase<T> extends DaoBase {
     	return sb.toString();
     }
     
-    @SuppressWarnings("unchecked")
-	private T bindParam(int index, Object param) throws SQLException {
-        if (null == statement) {
-            throw new SQLException("bindParam must exist statement.call method insert update delete query..");
-        }
-        if(null == param) {
-        	statement.setObject(index, param);
-        } else if (param instanceof String) {
-        	statement.setString(index, param.toString());
-		} else if (param instanceof Date) {
-			statement.setDate(index, Date.valueOf(param.toString()));
-		} else if (param instanceof Boolean) {
-			statement.setBoolean(index, (Boolean) (param));
-		} else if (param instanceof Integer) {
-			statement.setInt(index, (Integer) param);
-		} else if (param instanceof Float) {
-			statement.setFloat(index, (Float) param);
-		} else if (param instanceof Double) {
-			statement.setDouble(index, (Double) param);
-		} else {
-			statement.setObject(index, param);
-		}
-        return (T) this;
-    }
-    
     private void bindPendingParams() throws SQLException {
-    	List<String> list = DPUtil.getMatcher(PARAM_REGEX, sql, false);
-    	int size = list.size();
-    	int index = 0;
-    	for (int i = 0; i < size; i++) {
-    		String key = list.get(index);
+    	String sql = this.sql;
+    	List<Object> list = new ArrayList<>();
+    	List<String> params = DPUtil.getMatcher(PARAM_REGEX, sql, false); // 获取全部命名参数
+    	int size = params.size();
+    	for (int index = 0; index < size; index++) {
+    		String key = params.get(index);
     		Object value = pendingParams.get(key);
     		if(null == value) { // null值
-    			bindParam(index++, "");
+    			list.add("");
     		} else if(value.getClass().isArray()) { // 数组
     			Object[] values = (Object[]) value;
     			sql = sql.replaceFirst(key, DPUtil.implode(", ", DPUtil.getFillArray(values.length, "?")));
     			for (Object item : values) {
-    				bindParam(index++, item);
+    				list.add(item);
     			}
     		} else {
-    			bindParam(index++, value);
+    			list.add(value);
     		}
     	}
-    	sql = sql.replaceAll(PARAM_REGEX, "?");
+    	sql = sql.replaceAll(PARAM_REGEX, "?"); // 替换命名参数为占位符
+    	statement = resource.prepareStatement(sql);
+    	size = list.size();
+    	for (int index = 0; index < size;) {
+    		Object param = list.get(index++);
+    		if(null == param) {
+            	statement.setObject(index, param);
+            } else if (param instanceof String) {
+            	statement.setString(index, param.toString());
+    		} else if (param instanceof Date) {
+    			statement.setDate(index, Date.valueOf(param.toString()));
+    		} else if (param instanceof Boolean) {
+    			statement.setBoolean(index, (Boolean) (param));
+    		} else if (param instanceof Integer) {
+    			statement.setInt(index, (Integer) param);
+    		} else if (param instanceof Float) {
+    			statement.setFloat(index, (Float) param);
+    		} else if (param instanceof Double) {
+    			statement.setDouble(index, (Double) param);
+    		} else {
+    			statement.setObject(index, param);
+    		}
+    	}
     	pendingParams = new LinkedHashMap<>();
     }
     
@@ -353,7 +351,6 @@ public abstract class MySQLBase<T> extends DaoBase {
         	close();
             if(isMaster || connector.isTransaction()) forRead = false;
             resource = forRead ? connector.getSlave() : connector.getMaster();
-			statement = resource.prepareStatement(sql);
 			bindPendingParams();
 	        return statement.execute();
 		} catch (SQLException e) {
@@ -391,12 +388,11 @@ public abstract class MySQLBase<T> extends DaoBase {
         try {
         	close();
             resource = connector.getMaster();
-			statement = resource.prepareStatement(sql);
 			bindPendingParams();
 	        return statement.executeUpdate();
 		} catch (SQLException e) {
 			exception = e;
-			if(retry > 0 && 2006 == e.getErrorCode()) {
+			if(retry > 0 && null == e.getSQLState()) {
 				connector.close();
 				return executeUpdate(--retry);
 			}
