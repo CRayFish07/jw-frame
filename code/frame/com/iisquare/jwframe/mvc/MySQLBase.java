@@ -333,7 +333,8 @@ public abstract class MySQLBase extends DaoBase {
 	        return statement.execute();
 		} catch (SQLException e) {
 			exception = e;
-			if(retry > 0 && 2006 == e.getErrorCode()) {
+			//if(retry > 0 && 2006 == e.getErrorCode()) {
+			if(retry > 0 && null == e.getSQLState()) {
 				connector.close();
 				return execute(--retry);
 			}
@@ -536,7 +537,7 @@ public abstract class MySQLBase extends DaoBase {
     		Number lastId = lastInsertId(statement);
     		close();
     		return lastId;
-    	} else if(null != exception && "42S02".equals(exception.getErrorCode()) && createTable()) { // TODO 42S02
+    	} else if(null != exception && "42S02".equals(exception.getSQLState()) && createTable()) {
     		transientNeedUpdate = needUpdate;
     		return insert(data);
     	}
@@ -576,7 +577,7 @@ public abstract class MySQLBase extends DaoBase {
     		Number lastId = lastInsertId(statement);
     		close();
     		return lastId;
-    	} else if(null != exception && "42S02".equals(exception.getErrorCode()) && createTable()) { // TODO 42S02
+    	} else if(null != exception && "42S02".equals(exception.getSQLState()) && createTable()) {
     		transientNeedUpdate = needUpdate;
     		return batchInsert(datas);
     	}
