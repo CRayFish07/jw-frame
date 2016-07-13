@@ -28,6 +28,7 @@ import com.iisquare.jwframe.utils.DPUtil;
 public abstract class MySQLBase<T> extends DaoBase {
 	
 	public static final String PARAM_PREFIX = ":qp";
+	private static final String PARAM_REGEX = ":[a-zA-Z0-9_]+";
 	@Autowired
 	private WebApplicationContext webApplicationContext;
 	private MySQLConnectorManager connectorManager;
@@ -323,11 +324,25 @@ public abstract class MySQLBase<T> extends DaoBase {
     }
     
     private void bindPendingParams() throws SQLException {
-    	List<String> list = DPUtil.getMatcher(":[a-zA-Z0-9_]+", sql, false);
+    	List<String> list = DPUtil.getMatcher(PARAM_REGEX, sql, false);
     	int size = list.size();
-    	for (int index = 0; index < size; index++) {
-    		bindParam(index, pendingParams.get(list.get(index)));
+    	int index = 0;
+    	for (int i = 0; i < size; i++) {
+    		String key = list.get(index);
+    		Object value = pendingParams.get(key);
+    		if(null == value) { // null值
+    			bindParam(index++, "");
+    		} else if(value.getClass().isArray()) { // 数组
+    			Object[] values = (Object[]) value;
+    			sql = sql.replaceFirst(key, DPUtil.implode(", ", DPUtil.getFillArray(values.length, "?")));
+    			for (Object item : values) {
+    				bindParam(index++, item);
+    			}
+    		} else {
+    			bindParam(index++, value);
+    		}
     	}
+    	sql = sql.replaceAll(PARAM_REGEX, "?");
     	pendingParams = new LinkedHashMap<>();
     }
     
