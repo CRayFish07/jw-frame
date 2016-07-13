@@ -36,7 +36,7 @@ public class IndexController extends CoreController {
 		data.put("name", "Node" + DPUtil.getCurrentSeconds());
 		data.put("status", 1);
 		Integer id = demoService.insert(data);
-        if(null == id) return displayMessage(500, null, null);
+		if(null == id) return displayMessage(500, null, null);
 		return displayMessage(0, null, id);
 	}
 	
