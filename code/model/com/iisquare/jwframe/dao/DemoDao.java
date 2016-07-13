@@ -31,4 +31,18 @@ public class DemoDao extends MySQLBase<DemoDao> {
 		return this;
 	}
 
+	@Override
+	protected boolean createTable() {
+		return null != executeUpdate(new StringBuilder()
+			.append("CREATE TABLE `").append(tableName()).append("` (")
+			.append("	`id` int(11) NOT NULL AUTO_INCREMENT,")
+			.append("	`parent_id` int(11) NOT NULL DEFAULT '0',")
+			.append("	`name` varchar(64) NOT NULL,")
+			.append("	`status` tinyint(4) NOT NULL DEFAULT '0',")
+			.append("	PRIMARY KEY (`id`),")
+			.append("	KEY `parent_id` (`parent_id`)")
+			.append(") ENGINE=InnoDB DEFAULT CHARSET=utf8;")
+			.toString());
+	}
+
 }

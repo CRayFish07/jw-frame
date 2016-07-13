@@ -438,7 +438,7 @@ public abstract class MySQLBase<T> extends DaoBase {
 		while (rs.next()) {
 			tempHash = new LinkedHashMap<String, Object>();
 			for (int i = 0; i < rsmd.getColumnCount(); i++) {
-				tempHash.put(rsmd.getColumnName(i + 1), rs.getString(rsmd.getColumnName(i + 1)));
+				tempHash.put(rsmd.getColumnName(i + 1), rs.getObject(rsmd.getColumnName(i + 1)));
 			}
 			tempList.add(tempHash);
 		}
@@ -516,7 +516,7 @@ public abstract class MySQLBase<T> extends DaoBase {
     
     private Number lastInsertId(PreparedStatement statement) {
 		try {
-			ResultSet keys = statement.getGeneratedKeys();
+			ResultSet keys = statement.executeQuery("SELECT last_insert_id();");
 			if(keys.next()) {
 	    		return (Number) keys.getObject(1);
 	    	}
