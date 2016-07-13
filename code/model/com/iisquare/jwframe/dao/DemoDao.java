@@ -10,7 +10,7 @@ import com.iisquare.jwframe.mvc.MySQLBase;
 
 @Component
 @Scope("prototype")
-public class DemoDao extends MySQLBase {
+public class DemoDao extends MySQLBase<DemoDao> {
 
 	@Override
 	public String tableName() {
@@ -25,6 +25,10 @@ public class DemoDao extends MySQLBase {
 		columns.put("name", null); // 名称
 		columns.put("status", null); // 状态
 		return columns;
+	}
+	
+	public DemoDao self() {
+		return this;
 	}
 
 }

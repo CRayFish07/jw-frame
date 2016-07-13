@@ -25,7 +25,7 @@ import com.iisquare.jwframe.database.MySQLConnector;
 import com.iisquare.jwframe.database.MySQLConnectorManager;
 import com.iisquare.jwframe.utils.DPUtil;
 
-public abstract class MySQLBase extends DaoBase {
+public abstract class MySQLBase<T> extends DaoBase {
 	
 	public static final String PARAM_PREFIX = ":qp";
 	@Autowired
@@ -168,101 +168,110 @@ public abstract class MySQLBase extends DaoBase {
     	return map;
     }
     
-    public MySQLBase bindValue(String name, Object value) {
+    @SuppressWarnings("unchecked")
+	public T bindValue(String name, Object value) {
     	pendingParams.put(name, value);
-        return this;
+        return (T) this;
     }
 	
-	public MySQLBase bindValues(Map<String, Object> values) {
-		if(null == values) return this;
+	@SuppressWarnings("unchecked")
+	public T bindValues(Map<String, Object> values) {
+		if(null == values) return (T) this;
 		for (Entry<String, Object> entry : values.entrySet()) {
 			pendingParams.put(entry.getKey(), entry.getValue());
 		}
-		return this;
+		return (T) this;
 	}
     
 	/**
      * 清除已绑定的查询参数数组
      */
-    public MySQLBase cancelBindValues() {
+    @SuppressWarnings("unchecked")
+	public T cancelBindValues() {
     	pendingParams = new LinkedHashMap<>();
-        return this;
+        return (T) this;
     }
 	
-	public MySQLBase select(String columns) {
+	@SuppressWarnings("unchecked")
+	public T select(String columns) {
         select = columns;
-        return this;
+        return (T) this;
     }
 	
-	public MySQLBase where(String condition, Object... params) {
+	public T where(String condition, Object... params) {
 		return where(condition, buildValues(params));
 	}
 	
-	public MySQLBase where (String condition, Map<String, Object> params) {
+	public T where (String condition, Map<String, Object> params) {
 		this.where = condition;
 		return bindValues(params);
 	}
 
-	private MySQLBase join(String type, String table, String on) {
+	@SuppressWarnings("unchecked")
+	private T join(String type, String table, String on) {
 		if(null == join) join = new ArrayList<>();
 		join.add(new String[]{type, table, on});
-		return this;
+		return (T) this;
 	}
 	
-	public MySQLBase innerJoin(String table, String on, Object... params) {
+	public T innerJoin(String table, String on, Object... params) {
     	return innerJoin(table, on, buildValues(params));
     }
 	
-    public MySQLBase innerJoin(String table, String on, Map<String, Object> params) {
+    public T innerJoin(String table, String on, Map<String, Object> params) {
     	join("INNER JOIN", table, on);
     	return bindValues(params);
     }
     
-    public MySQLBase leftJoin(String table, String on, Object... params) {
+    public T leftJoin(String table, String on, Object... params) {
     	return leftJoin(table, on, buildValues(params));
     }
     
-    public MySQLBase leftJoin(String table, String on, Map<String, Object> params) {
+    public T leftJoin(String table, String on, Map<String, Object> params) {
     	join("LEFT JOIN", table, on);
     	return bindValues(params);
     }
     
-    public MySQLBase rightJoin(String table, String on, Object... params) {
+    public T rightJoin(String table, String on, Object... params) {
     	return rightJoin(table, on, buildValues(params));
     }
     
-    public MySQLBase rightJoin(String table, String on, Map<String, Object> params) {
+    public T rightJoin(String table, String on, Map<String, Object> params) {
     	join("RIGHT JOIN", table, on);
     	return bindValues(params);
     }
     
-    public MySQLBase groupBy(String columns) {
+    @SuppressWarnings("unchecked")
+	public T groupBy(String columns) {
         groupBy = columns;
-        return this;
+        return (T) this;
     }
     
-    public MySQLBase orderBy(String columns) {
+    @SuppressWarnings("unchecked")
+	public T orderBy(String columns) {
         orderBy = columns;
-        return this;
+        return (T) this;
     }
     
-    public MySQLBase having(String condition, Object... params) {
+    public T having(String condition, Object... params) {
         return having(condition, buildValues(params));
     }
     
-    public MySQLBase having(String condition, Map<String, Object> params) {
+    public T having(String condition, Map<String, Object> params) {
         having = condition;
         return bindValues(params);
     }
     
-    public MySQLBase limit(int limit) {
+    @SuppressWarnings("unchecked")
+	public T limit(int limit) {
         this.limit = limit;
-        return this;
+        return (T) this;
     }
     
-    public MySQLBase offset(int offset) {
+    @SuppressWarnings("unchecked")
+	public T offset(int offset) {
         this.offset = offset;
-        return this;
+        return (T) this;
     }
     
     private String build() {
@@ -288,7 +297,8 @@ public abstract class MySQLBase extends DaoBase {
     	return sb.toString();
     }
     
-    private MySQLBase bindParam(int index, Object param) throws SQLException {
+    @SuppressWarnings("unchecked")
+	private T bindParam(int index, Object param) throws SQLException {
         if (null == statement) {
             throw new SQLException("bindParam must exist statement.call method insert update delete query..");
         }
@@ -309,7 +319,7 @@ public abstract class MySQLBase extends DaoBase {
 		} else {
 			statement.setObject(index, param);
 		}
-        return this;
+        return (T) this;
     }
     
     private void bindPendingParams() throws SQLException {
@@ -631,7 +641,8 @@ public abstract class MySQLBase extends DaoBase {
     /**
      * 清除 select() where() limit() offset() orderBy() groupBy() join() having()
      */
-    public MySQLBase reset() {
+    @SuppressWarnings("unchecked")
+	public T reset() {
         close();
         select = null;
     	where = null;
@@ -643,7 +654,7 @@ public abstract class MySQLBase extends DaoBase {
     	join = null;
     	pendingParams = new LinkedHashMap<>();
     	transientNeedUpdate = false;
-        return this;
+        return (T) this;
     }
     
     public boolean beginTransaction() {
