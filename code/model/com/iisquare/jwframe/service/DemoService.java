@@ -19,8 +19,7 @@ public class DemoService extends ServiceBase {
 	
 	public Integer insert(Map<String, Object> data) {
 		Number id = demoDao.insert(data);
-		if(null == id) return null;
-        return id.intValue();
+		return null == id ? null : id.intValue();
     }
     
 	public List<Map<String, Object>> getList() {
