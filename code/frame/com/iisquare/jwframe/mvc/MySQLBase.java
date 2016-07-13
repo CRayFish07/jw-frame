@@ -132,7 +132,7 @@ public abstract class MySQLBase extends DaoBase {
     	for(Entry<String, Map<String, Object>> entry : collumnNames.entrySet()) {
     		String key = entry.getKey();
     		if(!data.containsKey(key)) continue ;
-    		result.put(key, entry.getValue());
+    		result.put(key, data.get(key));
     	}
     	return result;
     }
