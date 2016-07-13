@@ -288,7 +288,7 @@ public abstract class MySQLBase extends DaoBase {
     	return sb.toString();
     }
     
-    public MySQLBase bindParam(int index, Object param) throws SQLException {
+    private MySQLBase bindParam(int index, Object param) throws SQLException {
         if (null == statement) {
             throw new SQLException("bindParam must exist statement.call method insert update delete query..");
         }
@@ -560,7 +560,7 @@ public abstract class MySQLBase extends DaoBase {
     			Object value = data.get(key);
     			if(null == value) {
     				value = "''";
-    			} else if (value instanceof String) {
+    			} else {
     				value = "'" + StringEscapeUtils.escapeSql(value.toString()) + "'";
     			}
     			list.add(value);
