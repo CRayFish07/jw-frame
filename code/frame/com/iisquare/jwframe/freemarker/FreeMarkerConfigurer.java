@@ -19,7 +19,7 @@ public class FreeMarkerConfigurer implements InitializingBean, ServletContextAwa
 	private long templateUpdateDelay = 0;
 	private String templateExceptionHandler = "ignore";
 	
-	public com.iisquare.jwframe.Configuration getapplicationConfiguration() {
+	public com.iisquare.jwframe.Configuration getApplicationConfiguration() {
 		return applicationConfiguration;
 	}
 

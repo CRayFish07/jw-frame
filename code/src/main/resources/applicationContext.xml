@@ -54,4 +54,8 @@
         </constructor-arg>
     </bean>
  
+ 	<bean class="com.iisquare.jwframe.freemarker.FreemarkerTemplateManager" lazy-init="false">
+		<property name="freeMarkerConfigurer" ref="freeMarkerConfigurer" />
+	</bean>
+ 
 </beans>
