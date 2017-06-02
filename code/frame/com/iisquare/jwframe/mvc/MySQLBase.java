@@ -19,12 +19,16 @@ import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.iisquare.jwframe.database.MySQLConnector;
 import com.iisquare.jwframe.database.MySQLConnectorManager;
 import com.iisquare.jwframe.utils.DPUtil;
 
+@Component
+@Scope("prototype")
 public abstract class MySQLBase<T> extends DaoBase {
 	
 	public static final String PARAM_PREFIX = ":qp";

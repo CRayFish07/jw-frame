@@ -11,6 +11,8 @@ import javax.servlet.http.HttpServletResponse;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.iisquare.jwframe.Configuration;
@@ -18,6 +20,8 @@ import com.iisquare.jwframe.freemarker.FreeMarkerConfigurer;
 
 import freemarker.template.Template;
 
+@Controller
+@Scope("prototype")
 public abstract class ControllerBase {
 	
 	protected WebApplicationContext webApplicationContext;

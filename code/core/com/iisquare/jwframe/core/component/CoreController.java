@@ -3,8 +3,13 @@ package com.iisquare.jwframe.core.component;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
+
 import com.iisquare.jwframe.mvc.ControllerBase;
 
+@Controller
+@Scope("prototype")
 public abstract class CoreController extends ControllerBase {
 
 	protected Object displayMessage(int code, Object message, Object data) throws Exception {
